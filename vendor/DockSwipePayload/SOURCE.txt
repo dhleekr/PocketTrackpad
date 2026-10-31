@@ -1,0 +1,3 @@
+Payload helpers adapted from https://github.com/joshuarli/iss
+Commit: 493b008f2ea8e9215877c39700e8ea3add800e97
+Only serialization helpers are used. No event interception or space switching code is included.

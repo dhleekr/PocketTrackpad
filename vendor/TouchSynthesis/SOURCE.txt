@@ -1,0 +1,4 @@
+Source: https://github.com/Hammerspoon/hammerspoon
+Commit: 23e387e2805a9890066366e0ac96c71b27f0cfd5
+TouchSynthesis originally by Nathan Vander Wilt, Calf Trail Software (2010).
+Experimental undocumented macOS gesture serialization.

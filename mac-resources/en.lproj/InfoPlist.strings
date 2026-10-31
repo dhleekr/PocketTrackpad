@@ -1,0 +1,2 @@
+"NSBluetoothAlwaysUsageDescription" = "Receive trackpad input from your iPhone over Bluetooth.";
+"NSLocalNetworkUsageDescription" = "Receive encrypted trackpad input from your iPhone on your local network.";

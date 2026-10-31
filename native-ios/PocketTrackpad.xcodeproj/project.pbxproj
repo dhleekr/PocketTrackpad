@@ -1,0 +1,53 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+000000000000000000000A11 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/PadDiagnostics.swift"; sourceTree = "<group>"; };
+000000000000000000000A12 = { isa = PBXBuildFile; fileRef = 000000000000000000000A11; };
+000000000000000000000A01 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../shared/SecureLink.swift"; sourceTree = "<group>"; };
+000000000000000000000A02 = { isa = PBXBuildFile; fileRef = 000000000000000000000A01; };
+0000000000000000000003C4 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../shared/BLEWire.swift"; sourceTree = "<group>"; };
+0000000000000000000003C5 = { isa = PBXBuildFile; fileRef = 0000000000000000000003C4; };
+0000000000000000000003C2 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/TrackpadClient.swift"; sourceTree = "<group>"; };
+0000000000000000000003C3 = { isa = PBXBuildFile; fileRef = 0000000000000000000003C2; };
+0000000000000000000003C0 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/BLEClient.swift"; sourceTree = "<group>"; };
+0000000000000000000003C1 = { isa = PBXBuildFile; fileRef = 0000000000000000000003C0; };
+000000000000000000000910 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Sources/Assets.xcassets; sourceTree = "<group>"; };
+000000000000000000000911 = { isa = PBXBuildFile; fileRef = 000000000000000000000910; };
+000000000000000000000912 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = Sources/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+000000000000000000000913 = { isa = PBXBuildFile; fileRef = 000000000000000000000912; };
+0000000000000000000003CE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/PTLocalization.swift; sourceTree = "<group>"; };
+0000000000000000000003CF = { isa = PBXBuildFile; fileRef = 0000000000000000000003CE; };
+0000000000000000000003C6 = { isa = PBXVariantGroup; children = (0000000000000000000003C7,0000000000000000000003C8,); name = Localizable.strings; sourceTree = "<group>"; };
+0000000000000000000003C7 = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Sources/en.lproj/Localizable.strings; sourceTree = "<group>"; };
+0000000000000000000003C8 = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = Sources/ko.lproj/Localizable.strings; sourceTree = "<group>"; };
+0000000000000000000003C9 = { isa = PBXBuildFile; fileRef = 0000000000000000000003C6; };
+0000000000000000000003CA = { isa = PBXVariantGroup; children = (0000000000000000000003CB,0000000000000000000003CC,); name = InfoPlist.strings; sourceTree = "<group>"; };
+0000000000000000000003CB = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Sources/en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+0000000000000000000003CC = { isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = Sources/ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+0000000000000000000003CD = { isa = PBXBuildFile; fileRef = 0000000000000000000003CA; };
+
+000000000000000000000900 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/QRScanner.swift; sourceTree = "<group>"; };
+000000000000000000000901 = { isa = PBXBuildFile; fileRef = 000000000000000000000900; };
+000000000000000000000001 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/PocketTrackpadApp.swift"; sourceTree = "<group>"; };
+000000000000000000000002 = { isa = PBXBuildFile; fileRef = 000000000000000000000001; };
+000000000000000000000003 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/WiFiClient.swift"; sourceTree = "<group>"; };
+000000000000000000000004 = { isa = PBXBuildFile; fileRef = 000000000000000000000003; };
+000000000000000000000005 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/GestureEngine.swift"; sourceTree = "<group>"; };
+000000000000000000000006 = { isa = PBXBuildFile; fileRef = 000000000000000000000005; };
+000000000000000000000007 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/NativePadView.swift; sourceTree = "<group>"; };
+000000000000000000000008 = { isa = PBXBuildFile; fileRef = 000000000000000000000007; };
+000000000000000000000009 = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Sources/Info.plist; sourceTree = "<group>"; };
+00000000000000000000000A = { isa = PBXFileReference; explicitFileType = wrapper.application; path = PocketTrackpad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+00000000000000000000000B = { isa = PBXGroup; children = (00000000000000000000000A,); name = Products; sourceTree = "<group>"; };
+00000000000000000000000C = { isa = PBXGroup; children = (000000000000000000000A11,000000000000000000000A01,0000000000000000000003C0,0000000000000000000003C2,0000000000000000000003C4,0000000000000000000003C6,0000000000000000000003CA,0000000000000000000003CE,000000000000000000000001,000000000000000000000003,000000000000000000000005,000000000000000000000007,000000000000000000000900,000000000000000000000910,000000000000000000000912,000000000000000000000009,00000000000000000000000B,); sourceTree = "<group>"; };
+00000000000000000000000D = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000A12,000000000000000000000A02,0000000000000000000003C1,0000000000000000000003C3,0000000000000000000003C5,0000000000000000000003CF,000000000000000000000002,000000000000000000000004,000000000000000000000006,000000000000000000000008,000000000000000000000901,); runOnlyForDeploymentPostprocessing = 0; };
+00000000000000000000000E = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000911,000000000000000000000913,0000000000000000000003C9,0000000000000000000003CD,); runOnlyForDeploymentPostprocessing = 0; };
+00000000000000000000000F = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+000000000000000000000010 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
+000000000000000000000011 = { isa = XCBuildConfiguration; name = Debug; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = local.doohyun.pockettrackpad.nativewifi; INFOPLIST_FILE = Sources/Info.plist; GENERATE_INFOPLIST_FILE = NO; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; SKIP_INSTALL = NO; TARGETED_DEVICE_FAMILY = 1; SWIFT_VERSION = 5.0; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; ENABLE_USER_SCRIPT_SANDBOXING = YES; }; };
+000000000000000000000012 = { isa = XCBuildConfiguration; name = Release; buildSettings = { SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; }; };
+000000000000000000000013 = { isa = XCBuildConfiguration; name = Release; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = local.doohyun.pockettrackpad.nativewifi; INFOPLIST_FILE = Sources/Info.plist; GENERATE_INFOPLIST_FILE = NO; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = ""; ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; SKIP_INSTALL = NO; TARGETED_DEVICE_FAMILY = 1; SWIFT_VERSION = 5.0; SWIFT_OPTIMIZATION_LEVEL = "-O"; ENABLE_USER_SCRIPT_SANDBOXING = YES; }; };
+000000000000000000000014 = { isa = XCConfigurationList; buildConfigurations = (000000000000000000000010,000000000000000000000012,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+000000000000000000000015 = { isa = XCConfigurationList; buildConfigurations = (000000000000000000000011,000000000000000000000013,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+000000000000000000000016 = { isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000015; buildPhases = (00000000000000000000000D,00000000000000000000000F,00000000000000000000000E,); buildRules = (); dependencies = (); name = PocketTrackpad; productName = PocketTrackpad; productReference = 00000000000000000000000A; productType = "com.apple.product-type.application"; };
+000000000000000000000017 = { isa = PBXProject; attributes = { LastUpgradeCheck = 2660; }; buildConfigurationList = 000000000000000000000014; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,ko,Base,); mainGroup = 00000000000000000000000C; productRefGroup = 00000000000000000000000B; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000016,); };
+}; rootObject = 000000000000000000000017; }

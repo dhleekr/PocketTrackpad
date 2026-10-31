@@ -1,0 +1,160 @@
+"Wi-Fi" = "Wi-Fi";
+"Bluetooth" = "블루투스";
+"Rotate to portrait" = "세로로 전환";
+"Rotate to landscape" = "가로로 전환";
+"Trackpad settings" = "트랙패드 설정";
+"Connection" = "연결";
+"Keep the Mac app open to connect automatically." = "Mac 앱을 켜두면 자동으로 연결됩니다.";
+"Scan Mac QR" = "Mac QR 스캔";
+"Reconnect" = "다시 연결";
+"Advanced" = "고급";
+"Mac connection address" = "Mac 연결 주소";
+"Connect with address" = "주소로 연결";
+"Wi-Fi round-trip latency" = "Wi-Fi 왕복 지연";
+"Bluetooth round-trip latency" = "블루투스 왕복 지연";
+"Reset measurements" = "측정 초기화";
+"Click" = "클릭";
+"Press to click · haptic feedback" = "꾹 눌러 클릭 · 진동";
+"Double-tap interval" = "더블탭 간격";
+"%.2f s" = "%.2f초";
+"A longer interval allows more time between taps." = "길수록 천천히 두 번 탭해도 인식합니다.";
+"Press delay" = "눌림 시간";
+"Tap: click · Tap twice quickly: double-click\nMove while holding the second tap: drag · Lift to release\nTwo-finger tap: right-click · Press and move: drag" = "탭: 클릭 · 빠르게 두 번 탭: 더블클릭\n두 번째 탭을 붙인 채 이동: 드래그 · 떼면 해제\n두 손가락 탭: 우클릭 · 길게 누른 채 이동: 드래그";
+"Movement" = "움직임";
+"Cursor speed" = "커서 속도";
+"%.2f×" = "%.2f배";
+"Natural scrolling" = "자연스러운 스크롤";
+"Two fingers: scroll · Pinch: zoom" = "두 손가락: 스크롤 · 벌리기/오므리기: 확대/축소";
+"Trackpad" = "트랙패드";
+"Done" = "닫기";
+"Cancel" = "취소";
+"Trackpad surface" = "트랙패드";
+"Move one finger, scroll with two fingers, swipe up with three fingers for Mission Control, or swipe left and right to switch desktops. Tap or press briefly to click." = "한 손가락 이동, 두 손가락 스크롤, 세 손가락 위로 Mission Control, 좌우로 데스크탑 전환. 탭 또는 잠깐 누르기로 클릭합니다.";
+"Allow camera access in Settings, or paste the Mac address." = "설정에서 카메라를 허용하거나 Mac 주소를 붙여넣으세요.";
+"Camera is unavailable." = "카메라를 사용할 수 없습니다.";
+"Could not start QR scanning." = "QR 인식을 시작하지 못했습니다.";
+"Bluetooth 연결을 선택하세요." = "블루투스 연결을 선택하세요.";
+"Scan the Mac QR first." = "먼저 Mac QR을 스캔하세요.";
+"Bluetooth authentication timed out." = "블루투스 인증 시간이 초과됐습니다.";
+"No Bluetooth response. Reconnect." = "블루투스 응답이 없습니다. 다시 연결하세요.";
+"Allow PocketTrackpad to use Bluetooth in Settings." = "설정에서 PocketTrackpad의 블루투스 사용을 허용하세요.";
+"Turn on Bluetooth." = "블루투스를 켜주세요.";
+"Keep the Mac app open. Waiting for Bluetooth…" = "Mac 앱을 켜두세요. 블루투스 연결 대기 중…";
+"Could not start the Bluetooth service." = "블루투스 서비스를 시작하지 못했습니다.";
+"Bluetooth discovery failed: %@" = "블루투스 검색 실패: %@";
+"Verifying the Mac QR…" = "Mac QR 인증 중…";
+"Waiting for Bluetooth…" = "블루투스 연결 대기 중…";
+"Bluetooth connected · %d ms" = "블루투스 연결됨 · %d ms";
+"Check PocketTrackpad input permission on the Mac." = "Mac의 PocketTrackpad 입력 권한을 확인하세요.";
+"Bluetooth authentication or response error. Check the Mac QR." = "블루투스 인증 또는 응답 오류. Mac QR을 확인하세요.";
+"Bluetooth transfer is backed up." = "블루투스 전송이 밀렸습니다.";
+"Bluetooth input is backed up." = "블루투스 입력이 밀렸습니다.";
+"Unable to change screen orientation: %@" = "화면 방향 전환 실패: %@";
+"Mac QR로 연결하세요." = "Mac QR로 연결하세요.";
+"Wi-Fi 연결 중…" = "Wi-Fi 연결 중…";
+"Mac 앱의 전체 QR 또는 연결 주소를 사용하세요." = "Mac 앱의 전체 QR 또는 연결 주소를 사용하세요.";
+"Not measured" = "측정 전";
+"Mac 앱의 전체 연결 주소 또는 QR을 사용하세요." = "Mac 앱의 전체 연결 주소 또는 QR을 사용하세요.";
+"같은 로컬 네트워크의 Mac 주소만 연결할 수 있습니다." = "같은 로컬 네트워크의 Mac 주소만 연결할 수 있습니다.";
+"다른 아이폰이 이 Mac에 연결돼 있습니다." = "다른 아이폰이 이 Mac에 연결돼 있습니다.";
+"%@ 연결 중…" = "%@ 연결 중…";
+"Mac 연결됨 · %d ms" = "Mac 연결됨 · %d ms";
+"Mac 설정에서 PocketTrackpad 입력 권한을 확인하세요." = "Mac 설정에서 PocketTrackpad 입력 권한을 확인하세요.";
+"연결 끊김: %@" = "연결 끊김: %@";
+"입력 응답이 멈췄습니다. Mac과 Wi-Fi를 확인하세요." = "입력 응답이 멈췄습니다. Mac과 Wi-Fi를 확인하세요.";
+"입력이 밀려 연결을 해제했습니다." = "입력이 밀려 연결을 해제했습니다.";
+"입력 전송 실패: %@" = "입력 전송 실패: %@";
+
+"Two fingers: scroll" = "두 손가락: 스크롤";
+
+"Hold to unlock trackpad" = "길게 눌러 조작 보호 해제";
+
+"Unlock trackpad" = "조작 보호 해제";
+
+"Protect trackpad" = "조작 보호 켜기";
+
+"Stay in this app" = "홈으로 나가지 않기";
+
+"Apple Guided Access instructions" = "Apple 사용법 유도 안내";
+
+"Protection reduces accidental edge swipes. Hold the lock button to unlock. For a full Home-screen lock, enable Guided Access in Settings > Accessibility > Guided Access, then triple-click the side button in PocketTrackpad. End Guided Access with the side button and your Guided Access passcode or Face ID." = "조작 보호는 가장자리의 실수로 인한 스와이프를 줄입니다. 자물쇠를 길게 누르면 해제됩니다. 홈 이동을 완전히 막으려면 Settings > Accessibility > Guided Access를 켠 뒤 PocketTrackpad에서 측면 버튼을 세 번 누르세요. 종료할 때도 측면 버튼과 사용법 유도 암호 또는 Face ID를 사용합니다.";
+
+"Forget this Mac" = "이 Mac 연결 정보 삭제";
+
+"Forget this Mac?" = "이 Mac 연결 정보를 삭제할까요?";
+
+"This deletes the saved pairing key on this iPhone. Scan the Mac QR to connect again." = "이 아이폰에 저장된 연결 열쇠가 삭제됩니다. 다시 연결하려면 Mac QR을 스캔하세요.";
+
+"Mac app and support" = "Mac 앱과 지원";
+
+"Privacy policy" = "개인정보처리방침";
+
+"Bluetooth discoverable. Waiting for Mac…" = "블루투스 검색 신호 전송 중 · Mac 연결 대기…";
+
+"Haptic strength" = "햅틱 강도";
+
+"Off" = "끄기";
+
+"Press to click" = "꾹 눌러 클릭";
+
+"When to vibrate" = "진동이 울리는 시점";
+
+"Tap clicks" = "탭 클릭";
+
+"Press and drag" = "꾹 누르기·드래그 시작";
+
+"System gestures" = "시스템 제스처";
+
+"Release" = "손을 뗄 때";
+
+"Record timing diagnostics (15 seconds)" = "입력 진단 기록 (15초)";
+
+"Recording for 15 seconds…" = "15초 동안 기록 중…";
+
+"Share diagnostic recording" = "진단 기록 공유";
+
+"Could not save the recording. Please try again." = "기록을 저장하지 못했습니다. 다시 시도해 주세요.";
+
+"Records timing and connection stages only. No screen content, typed text, or pairing information. Share the file only when you choose." = "시간 간격과 연결 단계만 기록합니다. 화면 내용·입력한 글자·연결 인증 정보는 포함하지 않습니다. 공유할 때만 파일이 전달됩니다.";
+
+"Median %.0f · 95%% %.0f ms (%d samples)" = "중앙 %.0f · 95%% %.0f ms (%d회)";
+
+"Mac connected" = "Mac 연결됨";
+"Connect your Mac" = "Mac 연결하기";
+"Open the Mac app, then scan its QR code." = "Mac 앱을 열고 QR 코드를 스캔하세요.";
+"Connection options" = "연결 설정";
+"Pointer & scrolling" = "커서와 스크롤";
+"Click & drag" = "클릭과 드래그";
+"Haptics" = "햅틱";
+"Gesture guide" = "제스처 안내";
+"About & support" = "정보 및 지원";
+"Wi-Fi uses the same network. Bluetooth works nearby. Scan the Mac QR once for either connection." = "Wi-Fi는 같은 네트워크에서, Bluetooth는 가까운 거리에서 사용합니다. 두 연결 모두 Mac QR을 한 번 스캔하면 됩니다.";
+"Connect manually" = "주소로 연결";
+"Hold one finger to click and drag. Lift to release." = "한 손가락을 길게 눌러 클릭하고 드래그합니다. 손을 떼면 놓습니다.";
+"Tap once to click. Tap twice to double-click. To drag, keep your finger down on the second tap and move." = "한 번 탭하면 클릭, 두 번 탭하면 더블클릭합니다. 두 번째 탭에서 손가락을 붙인 채 움직이면 드래그합니다.";
+"One finger" = "한 손가락";
+"Two fingers" = "두 손가락";
+"Three fingers" = "세 손가락";
+"Move" = "움직이기";
+"Move the pointer." = "커서를 움직입니다.";
+"Tap" = "탭";
+"Click." = "클릭합니다.";
+"Double-tap" = "두 번 탭";
+"Double-click, or hold the second tap to drag." = "더블클릭하거나 두 번째 탭을 누른 채 드래그합니다.";
+"Slide" = "쓸기";
+"Scroll in any direction. Swipe sideways to go back or forward in supported apps." = "원하는 방향으로 스크롤합니다. 지원 앱에서는 좌우로 쓸어 앞뒤 페이지로 이동합니다.";
+"Right-click." = "오른쪽 클릭합니다.";
+"Pinch" = "오므리기와 벌리기";
+"Zoom in apps that support trackpad zoom." = "트랙패드 확대·축소를 지원하는 앱에서 확대·축소합니다.";
+"Swipe up" = "위로 쓸기";
+"Mission Control." = "미션 컨트롤을 엽니다.";
+"Swipe down" = "아래로 쓸기";
+"App Exposé." = "앱의 열린 창을 봅니다.";
+"Swipe sideways" = "좌우로 쓸기";
+"Switch desktops." = "데스크탑을 전환합니다.";
+"Available gestures depend on the Mac app and macOS settings." = "사용 가능한 제스처는 Mac 앱과 macOS 설정에 따라 다릅니다.";
+"Get the Mac app" = "Mac 앱 다운로드";
+"Contact support" = "지원 문의";
+"Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac." = "PocketTrackpad Mac 앱과 손쉬운 사용 권한이 필요합니다. 입력은 Mac으로 직접 전송됩니다.";
+
+"Hold for a moment to unlock. Settings and rotation remain available." = "길게 누르면 잠금이 해제됩니다. 잠금 중에도 설정과 회전 버튼을 사용할 수 있습니다.";

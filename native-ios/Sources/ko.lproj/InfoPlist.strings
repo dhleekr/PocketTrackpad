@@ -1,0 +1,4 @@
+"NSBluetoothAlwaysUsageDescription" = "아이폰과 Mac을 Bluetooth로 직접 연결해 트랙패드 입력을 전달합니다.";
+"NSCameraUsageDescription" = "Mac 연결 QR을 스캔합니다. 촬영 영상은 저장하거나 전송하지 않습니다.";
+"NSLocalNetworkUsageDescription" = "같은 Wi-Fi 네트워크의 Mac으로 트랙패드 입력을 전송합니다.";
+"CFBundleDisplayName" = "트랙패드";

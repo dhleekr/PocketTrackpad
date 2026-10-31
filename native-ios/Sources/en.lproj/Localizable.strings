@@ -1,0 +1,160 @@
+"Wi-Fi" = "Wi-Fi";
+"Bluetooth" = "Bluetooth";
+"Rotate to portrait" = "Rotate to portrait";
+"Rotate to landscape" = "Rotate to landscape";
+"Trackpad settings" = "Trackpad settings";
+"Connection" = "Connection";
+"Keep the Mac app open to connect automatically." = "Keep the Mac app open to connect automatically.";
+"Scan Mac QR" = "Scan Mac QR";
+"Reconnect" = "Reconnect";
+"Advanced" = "Advanced";
+"Mac connection address" = "Mac connection address";
+"Connect with address" = "Connect with address";
+"Wi-Fi round-trip latency" = "Wi-Fi round-trip latency";
+"Bluetooth round-trip latency" = "Bluetooth round-trip latency";
+"Reset measurements" = "Reset measurements";
+"Click" = "Click";
+"Press to click · haptic feedback" = "Press to click · haptic feedback";
+"Double-tap interval" = "Double-tap interval";
+"%.2f s" = "%.2f s";
+"A longer interval allows more time between taps." = "A longer interval allows more time between taps.";
+"Press delay" = "Press delay";
+"Tap: click · Tap twice quickly: double-click\nMove while holding the second tap: drag · Lift to release\nTwo-finger tap: right-click · Press and move: drag" = "Tap: click · Tap twice quickly: double-click\nMove while holding the second tap: drag · Lift to release\nTwo-finger tap: right-click · Press and move: drag";
+"Movement" = "Movement";
+"Cursor speed" = "Cursor speed";
+"%.2f×" = "%.2f×";
+"Natural scrolling" = "Natural scrolling";
+"Two fingers: scroll · Pinch: zoom" = "Two fingers: scroll · Pinch: zoom";
+"Trackpad" = "Trackpad";
+"Done" = "Done";
+"Cancel" = "Cancel";
+"Trackpad surface" = "Trackpad surface";
+"Move one finger, scroll with two fingers, swipe up with three fingers for Mission Control, or swipe left and right to switch desktops. Tap or press briefly to click." = "Move one finger, scroll with two fingers, swipe up with three fingers for Mission Control, or swipe left and right to switch desktops. Tap or press briefly to click.";
+"Allow camera access in Settings, or paste the Mac address." = "Allow camera access in Settings, or paste the Mac address.";
+"Camera is unavailable." = "Camera is unavailable.";
+"Could not start QR scanning." = "Could not start QR scanning.";
+"Bluetooth 연결을 선택하세요." = "Select Bluetooth to connect.";
+"Scan the Mac QR first." = "Scan the Mac QR first.";
+"Bluetooth authentication timed out." = "Bluetooth authentication timed out.";
+"No Bluetooth response. Reconnect." = "No Bluetooth response. Reconnect.";
+"Allow PocketTrackpad to use Bluetooth in Settings." = "Allow PocketTrackpad to use Bluetooth in Settings.";
+"Turn on Bluetooth." = "Turn on Bluetooth.";
+"Keep the Mac app open. Waiting for Bluetooth…" = "Keep the Mac app open. Waiting for Bluetooth…";
+"Could not start the Bluetooth service." = "Could not start the Bluetooth service.";
+"Bluetooth discovery failed: %@" = "Bluetooth discovery failed: %@";
+"Verifying the Mac QR…" = "Verifying the Mac QR…";
+"Waiting for Bluetooth…" = "Waiting for Bluetooth…";
+"Bluetooth connected · %d ms" = "Bluetooth connected · %d ms";
+"Check PocketTrackpad input permission on the Mac." = "Check PocketTrackpad input permission on the Mac.";
+"Bluetooth authentication or response error. Check the Mac QR." = "Bluetooth authentication or response error. Check the Mac QR.";
+"Bluetooth transfer is backed up." = "Bluetooth transfer is backed up.";
+"Bluetooth input is backed up." = "Bluetooth input is backed up.";
+"Unable to change screen orientation: %@" = "Unable to change screen orientation: %@";
+"Mac QR로 연결하세요." = "Scan the Mac QR to connect.";
+"Wi-Fi 연결 중…" = "Connecting over Wi-Fi…";
+"Mac 앱의 전체 QR 또는 연결 주소를 사용하세요." = "Use the complete QR code or connection address from the Mac app.";
+"Not measured" = "Not measured";
+"Mac 앱의 전체 연결 주소 또는 QR을 사용하세요." = "Use the full connection address or QR code from the Mac app.";
+"같은 로컬 네트워크의 Mac 주소만 연결할 수 있습니다." = "You can connect only to a Mac on the same local network.";
+"다른 아이폰이 이 Mac에 연결돼 있습니다." = "Another iPhone is connected to this Mac.";
+"%@ 연결 중…" = "Connecting to %@…";
+"Mac 연결됨 · %d ms" = "Mac connected · %d ms";
+"Mac 설정에서 PocketTrackpad 입력 권한을 확인하세요." = "Check PocketTrackpad input permission in Mac Settings.";
+"연결 끊김: %@" = "Connection lost: %@";
+"입력 응답이 멈췄습니다. Mac과 Wi-Fi를 확인하세요." = "Input has stopped responding. Check the Mac and Wi-Fi.";
+"입력이 밀려 연결을 해제했습니다." = "Input backed up; disconnected.";
+"입력 전송 실패: %@" = "Could not send input: %@";
+
+"Two fingers: scroll" = "Two fingers: scroll";
+
+"Hold to unlock trackpad" = "Hold to unlock trackpad";
+
+"Unlock trackpad" = "Unlock trackpad";
+
+"Protect trackpad" = "Protect trackpad";
+
+"Stay in this app" = "Stay in this app";
+
+"Apple Guided Access instructions" = "Apple Guided Access instructions";
+
+"Protection reduces accidental edge swipes. Hold the lock button to unlock. For a full Home-screen lock, enable Guided Access in Settings > Accessibility > Guided Access, then triple-click the side button in PocketTrackpad. End Guided Access with the side button and your Guided Access passcode or Face ID." = "Protection reduces accidental edge swipes. Hold the lock button to unlock. For a full Home-screen lock, enable Guided Access in Settings > Accessibility > Guided Access, then triple-click the side button in PocketTrackpad. End Guided Access with the side button and your Guided Access passcode or Face ID.";
+
+"Forget this Mac" = "Forget this Mac";
+
+"Forget this Mac?" = "Forget this Mac?";
+
+"This deletes the saved pairing key on this iPhone. Scan the Mac QR to connect again." = "This deletes the saved pairing key on this iPhone. Scan the Mac QR to connect again.";
+
+"Mac app and support" = "Mac app and support";
+
+"Privacy policy" = "Privacy policy";
+
+"Bluetooth discoverable. Waiting for Mac…" = "Bluetooth discoverable. Waiting for Mac…";
+
+"Haptic strength" = "Haptic strength";
+
+"Off" = "Off";
+
+"Press to click" = "Press to click";
+
+"When to vibrate" = "When to vibrate";
+
+"Tap clicks" = "Tap clicks";
+
+"Press and drag" = "Press and drag";
+
+"System gestures" = "System gestures";
+
+"Release" = "Release";
+
+"Record timing diagnostics (15 seconds)" = "Record timing diagnostics (15 seconds)";
+
+"Recording for 15 seconds…" = "Recording for 15 seconds…";
+
+"Share diagnostic recording" = "Share diagnostic recording";
+
+"Could not save the recording. Please try again." = "Could not save the recording. Please try again.";
+
+"Records timing and connection stages only. No screen content, typed text, or pairing information. Share the file only when you choose." = "Records timing and connection stages only. No screen content, typed text, or pairing information. Share the file only when you choose.";
+
+"Median %.0f · 95%% %.0f ms (%d samples)" = "Median %.0f · 95%% %.0f ms (%d samples)";
+
+"Mac connected" = "Mac connected";
+"Connect your Mac" = "Connect your Mac";
+"Open the Mac app, then scan its QR code." = "Open the Mac app, then scan its QR code.";
+"Connection options" = "Connection options";
+"Pointer & scrolling" = "Pointer & scrolling";
+"Click & drag" = "Click & drag";
+"Haptics" = "Haptics";
+"Gesture guide" = "Gesture guide";
+"About & support" = "About & support";
+"Wi-Fi uses the same network. Bluetooth works nearby. Scan the Mac QR once for either connection." = "Wi-Fi uses the same network. Bluetooth works nearby. Scan the Mac QR once for either connection.";
+"Connect manually" = "Connect manually";
+"Hold one finger to click and drag. Lift to release." = "Hold one finger to click and drag. Lift to release.";
+"Tap once to click. Tap twice to double-click. To drag, keep your finger down on the second tap and move." = "Tap once to click. Tap twice to double-click. To drag, keep your finger down on the second tap and move.";
+"One finger" = "One finger";
+"Two fingers" = "Two fingers";
+"Three fingers" = "Three fingers";
+"Move" = "Move";
+"Move the pointer." = "Move the pointer.";
+"Tap" = "Tap";
+"Click." = "Click.";
+"Double-tap" = "Double-tap";
+"Double-click, or hold the second tap to drag." = "Double-click, or hold the second tap to drag.";
+"Slide" = "Slide";
+"Scroll in any direction. Swipe sideways to go back or forward in supported apps." = "Scroll in any direction. Swipe sideways to go back or forward in supported apps.";
+"Right-click." = "Right-click.";
+"Pinch" = "Pinch";
+"Zoom in apps that support trackpad zoom." = "Zoom in apps that support trackpad zoom.";
+"Swipe up" = "Swipe up";
+"Mission Control." = "Mission Control.";
+"Swipe down" = "Swipe down";
+"App Exposé." = "App Exposé.";
+"Swipe sideways" = "Swipe sideways";
+"Switch desktops." = "Switch desktops.";
+"Available gestures depend on the Mac app and macOS settings." = "Available gestures depend on the Mac app and macOS settings.";
+"Get the Mac app" = "Get the Mac app";
+"Contact support" = "Contact support";
+"Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac." = "Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac.";
+
+"Hold for a moment to unlock. Settings and rotation remain available." = "Hold for a moment to unlock. Settings and rotation remain available.";

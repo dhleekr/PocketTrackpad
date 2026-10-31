@@ -1,0 +1,4 @@
+"NSBluetoothAlwaysUsageDescription" = "Connect your iPhone directly to your Mac over Bluetooth to send trackpad input.";
+"NSCameraUsageDescription" = "Scan the Mac connection QR code. Video is not saved or transmitted.";
+"NSLocalNetworkUsageDescription" = "Send trackpad input to your Mac over the same Wi-Fi network.";
+"CFBundleDisplayName" = "Trackpad";

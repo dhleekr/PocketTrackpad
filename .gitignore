@@ -1,0 +1,31 @@
+# Local builds and distribution artifacts
+/build/
+/release/
+/native-ios/build/
+/native-ios/release/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM/
+*.app/
+*.zip
+
+# Signing material and local configuration
+*.p12
+*.p8
+*.key
+*.csr
+*.cer
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
+!.env.example
+*.xcuserstate
+xcuserdata/
+
+# Runtime and development captures
+*.log
+*.jsonl
+.DS_Store
+__pycache__/
