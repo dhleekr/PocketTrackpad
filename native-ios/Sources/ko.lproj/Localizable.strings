@@ -158,3 +158,7 @@
 "Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac." = "PocketTrackpad Mac 앱과 손쉬운 사용 권한이 필요합니다. 입력은 Mac으로 직접 전송됩니다.";
 
 "Hold for a moment to unlock. Settings and rotation remain available." = "길게 누르면 잠금이 해제됩니다. 잠금 중에도 설정과 회전 버튼을 사용할 수 있습니다.";
+
+"Install PocketTrackpad on your Mac too." = "Mac에도 PocketTrackpad를 설치해 주세요.";
+"Both apps are required. Install and open the Mac receiver, allow Accessibility access, then scan its QR code here." = "아이폰 앱과 Mac 앱이 모두 필요합니다. Mac 수신 앱을 설치·실행하고 손쉬운 사용 권한을 허용한 다음, 여기서 Mac의 QR을 스캔하세요.";
+"Get the Mac app & setup" = "Mac 앱 다운로드 및 설치 안내";

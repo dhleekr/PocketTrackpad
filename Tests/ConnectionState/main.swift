@@ -1,0 +1,21 @@
+import Foundation
+var failures=0
+func check(_ value:Bool,_ label:String){print("\(value ? "PASS":"FAIL") \(label)");if !value{failures+=1}}
+var wifi=HostConnectionState()
+wifi.update("Wi-Fi connected",from:.wifi)
+wifi.update("Waiting for iPhone",from:.bluetooth)
+check(wifi.message == "Wi-Fi connected" && wifi.connected,"idle Bluetooth must not replace an authenticated Wi-Fi connection")
+var bluetooth=HostConnectionState()
+bluetooth.update("Bluetooth connected",from:.bluetooth)
+bluetooth.update("Wi-Fi unavailable",from:.wifi)
+check(bluetooth.message == "Bluetooth connected" && bluetooth.connected,"Wi-Fi failure must not replace an authenticated Bluetooth connection")
+bluetooth.update("Waiting for iPhone",from:.bluetooth)
+check(!bluetooth.connected,"disconnecting the active channel clears connected state")
+var both=HostConnectionState()
+both.update("Wi-Fi connected",from:.wifi)
+both.update("Bluetooth connected",from:.bluetooth)
+both.update("Waiting for iPhone",from:.wifi)
+check(both.connected && both.message == "Bluetooth connected","disconnecting one channel preserves the other live channel")
+both.update("Waiting for iPhone",from:.bluetooth)
+check(!both.connected && both.message == "Waiting for iPhone","all disconnected returns to waiting")
+exit(failures==0 ? 0:1)

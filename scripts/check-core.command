@@ -9,6 +9,7 @@ compile_run() {
   swiftc -module-cache-path "$TASK_CACHE" "$@" -o "$TASK_CHECK/$name"
   "$TASK_CHECK/$name"
 }
+compile_run connection ConnectionState.swift Tests/ConnectionState/main.swift
 compile_run gestures native-ios/Sources/GestureEngine.swift native-ios/Tests/main.swift
 compile_run wire shared/BLEWire.swift native-ios/Tests/BLE/main.swift
 compile_run motion MotionPlayback.swift Tests/Motion/main.swift -framework CoreVideo

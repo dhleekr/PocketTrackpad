@@ -158,3 +158,7 @@
 "Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac." = "Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac.";
 
 "Hold for a moment to unlock. Settings and rotation remain available." = "Hold for a moment to unlock. Settings and rotation remain available.";
+
+"Install PocketTrackpad on your Mac too." = "Install PocketTrackpad on your Mac too.";
+"Both apps are required. Install and open the Mac receiver, allow Accessibility access, then scan its QR code here." = "Both apps are required. Install and open the Mac receiver, allow Accessibility access, then scan its QR code here.";
+"Get the Mac app & setup" = "Get the Mac app & setup";

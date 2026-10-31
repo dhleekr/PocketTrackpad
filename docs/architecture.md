@@ -21,6 +21,10 @@ The Mac generates and retains a pairing key locally. Its QR carries the address 
 
 The protocol validates frame lengths, identifiers, event kinds, finite numeric values, and gesture phases. Disconnects release active input. The current receiver does not depend on the historical browser/Python prototype.
 
+## Connection presentation
+
+The receiver keeps Wi-Fi and Bluetooth status separately. An idle or failed transport must not overwrite the other transport’s authenticated connection. The same connection reducer is covered by regression tests.
+
 ## Native delivery
 
 The receiver needs macOS Accessibility authorization. Pointer and scroll events use native event delivery. `NativeMagnify.m`, `NativeScroll.swift`, and `NativeDockSwipe.c` isolate gesture adapters, including undocumented serialized events. Their behavior is OS-dependent. Changes here require meaningful regression checks and manual validation in real receiving apps.

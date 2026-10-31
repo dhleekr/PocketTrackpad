@@ -15,9 +15,11 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 1. Install the iPhone controller and the separate Mac receiver. The iPhone release is currently awaiting App Store review; it is not publicly available yet.
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
-4. Keep the iPhone app open and start moving. The Mac window hides after connection; reopening the Mac app shows the QR again. The iPhone Settings sheet stays open until you dismiss it.
+4. Keep the iPhone app open and start moving. The Mac window hides after connection; reopening the Mac app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
 
 The Mac download is signed with Developer ID and notarized by Apple. The source build uses local ad hoc signing unless you supply your own signing identity.
+
+The first connection screen explains that both apps are required and links directly to the Mac download and setup guide.
 
 ## A familiar set of gestures
 
@@ -92,6 +94,7 @@ The first command exercises gesture recognition, wire validation, motion playbac
 native-ios/       iPhone app, Xcode project, gesture tests
 shared/           Framing, secure connection setup, Bluetooth wire format
 Host.swift        Native Mac receiver and input application
+ConnectionState.swift
 MotionPlayback.swift
 NativeScroll.swift
 NativeMagnify.m

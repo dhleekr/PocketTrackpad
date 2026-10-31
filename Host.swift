@@ -244,6 +244,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     private var status:NSTextField!
     private var pairingLink=""
     private var hidAfterConnection=false
+    private var connectionState=HostConnectionState()
     #if POCKET_LOCAL_TEST
     private var pageTestTimer:Timer?
     @objc private func testWheel(){runPageTest(companion:false)}
@@ -275,16 +276,17 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         }
         return result
     }
-    private func report(_ text:String){
+    private func report(_ text:String,from transport:HostTransport){
         DispatchQueue.main.async{[weak self] in
             guard let self else{return}
-            self.status.stringValue=MacText(text)
+            self.connectionState.update(text,from:transport)
+            self.status.stringValue=MacText(self.connectionState.message)
             if text=="Wi-Fi connected" || text=="Bluetooth connected" {
                 // A fresh authenticated session hides a QR reopened after an earlier session.
                 if self.engine.handle(["type":"status"])=="ready" {
                     self.hidAfterConnection=true;self.window.orderOut(nil)
                 }
-            } else if text=="Waiting for iPhone" {
+            } else if !self.connectionState.connected {
                 self.hidAfterConnection=false
             }
         }
@@ -320,8 +322,8 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
                 filter.setValue(Data(pairingLink.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel")
                 if let output=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(output,from:output.extent){qr.image=NSImage(cgImage:cg,size:NSSize(width:184,height:184))}
             }
-            wifi=try NativeWiFiHost(token:key,apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0)})
-            bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0)})
+            wifi=try NativeWiFiHost(token:key,apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.wifi)})
+            bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.bluetooth)})
         }catch{status.stringValue=MacText("Could not start. Reopen PocketTrackpad.")}
         permissionTimer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
             self?.window.title=AXIsProcessTrusted() ? "PocketTrackpad for Mac":MacText("PocketTrackpad · Enable Mac control")

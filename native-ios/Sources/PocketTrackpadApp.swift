@@ -59,6 +59,17 @@ struct SettingsSheet:View {
                         Spacer(minLength:0)
                         if client.ready {Image(systemName:"checkmark.circle.fill").foregroundStyle(.green).accessibilityHidden(true)}
                     }.padding(.vertical,8)
+                    if !client.ready {
+                        VStack(alignment:.leading,spacing:10) {
+                            Text(PTText("Install PocketTrackpad on your Mac too.")).font(.subheadline).fontWeight(.medium)
+                            Text(PTText("Both apps are required. Install and open the Mac receiver, allow Accessibility access, then scan its QR code here."))
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Link(destination:URL(string:"https://pocket-trackpad.doohyun726675.chatgpt.site/support.html")!) {
+                                Label(PTText("Get the Mac app & setup"),systemImage:"arrow.down.app")
+                                    .frame(minHeight:32)
+                            }.font(.subheadline)
+                        }.padding(.vertical,6)
+                    }
                     Picker(PTText("Connection"),selection:$client.transport) {
                         ForEach(TrackpadClient.Transport.allCases,id:\.self) { mode in Text(PTText(mode.rawValue)).tag(mode) }
                     }.pickerStyle(.segmented).padding(.vertical,4)
