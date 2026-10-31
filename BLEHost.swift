@@ -81,6 +81,7 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
                 if let t=object["frameTime"] as? Double,t.isFinite{marker["t"]=t}
                 _ = apply(marker)
             }
+            if let value=LatencySnapshotReporter.value(in:object) {_ = apply(["type":"status","name":"connectionLatency","transport":"bluetooth","x":value])}
             lastSeen=Date();var status="ok";for event in events{if apply(event)=="permission" {status="permission"}};send(["status":status,"id":id])
         }} catch{close("Bluetooth connection closed")}
     }

@@ -19,3 +19,9 @@
 "Bluetooth connection closed" = "Bluetooth 연결 종료";
 "Bluetooth connection failed" = "Bluetooth 연결 실패";
 "Bluetooth pairing failed" = "Bluetooth 페어링 실패";
+
+"Connection round-trip: %d ms" = "연결 왕복 지연: %d ms";
+"Connection round-trip: waiting for iPhone measurement" = "연결 왕복 지연: 아이폰 측정값 대기 중";
+"Round-trip time between iPhone and Mac, not total input-to-display latency." = "아이폰과 Mac 사이의 왕복 시간입니다. 입력부터 화면 반영까지의 전체 지연은 아닙니다.";
+"Quit PocketTrackpad" = "PocketTrackpad 종료";
+"Disconnect and quit PocketTrackpad" = "연결을 끊고 PocketTrackpad 완전 종료";

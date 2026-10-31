@@ -65,5 +65,12 @@ test("continuous system progress requires a valid axis and terminal phase") {
 test("input timestamps reject non-finite, boolean and unreasonable values") {
  BLEWire.valid([["type":"move","x":1,"y":0,"t":1234.125]]) && !BLEWire.valid([["type":"move","t":true]]) && !BLEWire.valid([["type":"move","t":Double.infinity]]) && !BLEWire.valid([["type":"move","t":1e100]])
 }
+test("latency metadata is optional, numeric and bounded") {
+ LatencySnapshotReporter.value(in:[:]) == nil && LatencySnapshotReporter.value(in:["rttMS":true]) == nil && LatencySnapshotReporter.value(in:["rttMS":Double.nan]) == nil && LatencySnapshotReporter.value(in:["rttMS":-1]) == nil && LatencySnapshotReporter.value(in:["rttMS":15.5]) == 15.5
+}
+test("latency metadata is sent no more than once per second") {
+ var reporter=LatencySnapshotReporter()
+ return reporter.snapshot(milliseconds:0,at:1) == nil && reporter.snapshot(milliseconds:20,at:1) == 20 && reporter.snapshot(milliseconds:21,at:1.1) == nil && reporter.snapshot(milliseconds:21,at:2) == 21
+}
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

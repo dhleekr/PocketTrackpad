@@ -19,3 +19,9 @@
 "Bluetooth connection closed" = "Bluetooth connection closed";
 "Bluetooth connection failed" = "Bluetooth connection failed";
 "Bluetooth pairing failed" = "Bluetooth pairing failed";
+
+"Connection round-trip: %d ms" = "Connection round-trip: %d ms";
+"Connection round-trip: waiting for iPhone measurement" = "Connection round-trip: waiting for iPhone measurement";
+"Round-trip time between iPhone and Mac, not total input-to-display latency." = "Round-trip time between iPhone and Mac, not total input-to-display latency.";
+"Quit PocketTrackpad" = "Quit PocketTrackpad";
+"Disconnect and quit PocketTrackpad" = "Disconnect and quit PocketTrackpad";

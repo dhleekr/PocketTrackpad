@@ -126,3 +126,16 @@ struct BLESendWindow {
     mutating func didSend(at now:Double){lastSent=now}
     mutating func reset(){lastSent=nil}
 }
+
+struct LatencySnapshotReporter {
+    private var lastSent = -Double.infinity
+    mutating func snapshot(milliseconds:Int,at now:Double)->Double? {
+        guard milliseconds>0,milliseconds<=60000,now.isFinite,now-lastSent>=1 else{return nil}
+        lastSent=now;return Double(milliseconds)
+    }
+    static func value(in frame:[String:Any])->Double? {
+        guard let number=frame["rttMS"] as? NSNumber,CFGetTypeID(number) != CFBooleanGetTypeID() else{return nil}
+        let value=number.doubleValue
+        return value.isFinite && value>0 && value<=60000 ? value:nil
+    }
+}

@@ -25,6 +25,10 @@ The protocol validates frame lengths, identifiers, event kinds, finite numeric v
 
 The receiver keeps Wi-Fi and Bluetooth status separately. An idle or failed transport must not overwrite the other transport’s authenticated connection. The same connection reducer is covered by regression tests.
 
+The iPhone measures acknowledgments with a monotonic clock and includes an optional RTT sample in an existing input frame at most once per second. The Mac validates the metadata and shows only the active transport's fresh sample. Samples older than three seconds are hidden. This does not measure end-to-end input-to-display latency. Older peers remain protocol-compatible without showing a measurement.
+
+The Mac window never auto-hides on connection. Its close delegate hides only the window. Quit and Command-Q terminate the receiver and release active input. A second receiver instance asks the earlier process to reveal its window, then exits before constructing another input engine or binding a listener.
+
 ## Native delivery
 
 The receiver needs macOS Accessibility authorization. Pointer and scroll events use native event delivery. `NativeMagnify.m`, `NativeScroll.swift`, and `NativeDockSwipe.c` isolate gesture adapters, including undocumented serialized events. Their behavior is OS-dependent. Changes here require meaningful regression checks and manual validation in real receiving apps.

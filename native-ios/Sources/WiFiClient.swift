@@ -47,15 +47,16 @@ final class WiFiClient:NSObject,ObservableObject {
     private var lastReply=Date()
     private var queue=[PadEvent]()
     private var queuedAt=Date()
-    private var sent=[Int:Date]()
+    private var sent=[Int:TimeInterval]()
     private var sequence=0
+    private var latencyReporter=LatencySnapshotReporter()
     private(set) var peakInFlight=0
     var pendingFrameCount:Int { sent.count }
     var pendingEventCount:Int { queue.count }
     private var heartbeat:Timer?
     private var receiveTask:Task<Void,Never>?
     private(set) var droppedMotionBatches=0
-    struct Envelope:Encodable { var id:Int;var events:[PadEvent];var frameTime=ProcessInfo.processInfo.systemUptime }
+    struct Envelope:Encodable { var id:Int;var events:[PadEvent];var frameTime=ProcessInfo.processInfo.systemUptime;var rttMS:Double?=nil }
 
     func start() {
         guard socket == nil else { return }
@@ -89,8 +90,8 @@ final class WiFiClient:NSObject,ObservableObject {
                     self.lastReply=Date()
                     self.diagnostics?.record(.ack,sequence:reply["id"] as? Int)
                     if let id=reply["id"] as? Int,let start=self.sent[id] {
-                        let ms=Date().timeIntervalSince(start)*1000
-                        self.latencyMS=Int(ms);self.onLatency?(ms)
+                        let ms=(ProcessInfo.processInfo.systemUptime-start)*1000
+                        self.latencyMS=max(1,Int(ms.rounded()));self.onLatency?(ms)
                         self.sent=self.sent.filter{$0.key>id}
                     }
                     let wasReady=self.ready;self.ready=status=="ok"
@@ -140,8 +141,8 @@ final class WiFiClient:NSObject,ObservableObject {
         let events=Array(queue.prefix(64));queue.removeFirst(events.count);sequence+=1
         let id=sequence,current=generation
         diagnostics?.record(.sendStart,source:events.last?.t,count:events.count,pending:queue.count,sequence:id)
-        guard let data=try? JSONEncoder().encode(Envelope(id:id,events:events)),let text=String(data:data,encoding:.utf8) else { return }
-        sendBusy=true;sent[id]=Date()
+        guard let data=try? JSONEncoder().encode(Envelope(id:id,events:events,rttMS:latencyReporter.snapshot(milliseconds:latencyMS,at:ProcessInfo.processInfo.systemUptime))),let text=String(data:data,encoding:.utf8) else { return }
+        sendBusy=true;sent[id]=ProcessInfo.processInfo.systemUptime
         sent=sent.filter{$0.key>id-64};peakInFlight=max(peakInFlight,sent.count)
         Task { [weak self] in
             do { try await socket.send(Data(text.utf8)) }
@@ -168,7 +169,7 @@ final class WiFiClient:NSObject,ObservableObject {
         diagnostics?.record(.disconnected)
         generation=UUID();ready=false;heartbeat?.invalidate();heartbeat=nil;receiveTask?.cancel();receiveTask=nil
         socket?.cancel();socket=nil
-        sendBusy=false;queue=[];sent=[:]
+        sendBusy=false;queue=[];sent=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter()
     }
     private static let account="local.doohyun.pockettrackpad.wifi.pairing"
     private static func readPairing()->String? {

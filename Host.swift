@@ -243,7 +243,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     private var permissionTimer:Timer?
     private var status:NSTextField!
     private var pairingLink=""
-    private var hidAfterConnection=false
+    private var latencyLabel:NSTextField!
     private var connectionState=HostConnectionState()
     #if POCKET_LOCAL_TEST
     private var pageTestTimer:Timer?
@@ -270,29 +270,42 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     }
     #endif
     private func apply(_ input:[String:Any])->String {
-        let result=engine.handle(input)
-        if input["type"] as? String=="status",result=="ready" {
-            DispatchQueue.main.async{[weak self] in guard let self,!self.hidAfterConnection else{return};self.hidAfterConnection=true;self.window.orderOut(nil)}
+        if input["type"] as? String=="status",input["name"] as? String=="connectionLatency",
+           let value=input["x"] as? Double,let channel=input["transport"] as? String {
+            DispatchQueue.main.async{[weak self] in
+                guard let self else{return}
+                self.connectionState.updateLatency(value,from:channel == "bluetooth" ? .bluetooth:.wifi,at:ProcessInfo.processInfo.systemUptime)
+                self.refreshLatency()
+            }
+            return "ok"
         }
-        return result
+        return engine.handle(input)
+    }
+    private func refreshLatency(){
+        guard connectionState.connected else{latencyLabel.stringValue="";return}
+        if let value=connectionState.roundTripMS(at:ProcessInfo.processInfo.systemUptime) {
+            latencyLabel.stringValue=String(format:MacText("Connection round-trip: %d ms"),value)
+        } else {
+            latencyLabel.stringValue=MacText("Connection round-trip: waiting for iPhone measurement")
+        }
     }
     private func report(_ text:String,from transport:HostTransport){
         DispatchQueue.main.async{[weak self] in
             guard let self else{return}
             self.connectionState.update(text,from:transport)
             self.status.stringValue=MacText(self.connectionState.message)
-            if text=="Wi-Fi connected" || text=="Bluetooth connected" {
-                // A fresh authenticated session hides a QR reopened after an earlier session.
-                if self.engine.handle(["type":"status"])=="ready" {
-                    self.hidAfterConnection=true;self.window.orderOut(nil)
-                }
-            } else if !self.connectionState.connected {
-                self.hidAfterConnection=false
-            }
+            self.refreshLatency()
         }
+    }
+    @objc private func revealConnection(_ notification:Notification){
+        window?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
     }
     func applicationDidFinishLaunching(_ notification:Notification){
         NSApp.setActivationPolicy(.accessory)
+        DistributedNotificationCenter.default().addObserver(self,selector:#selector(revealConnection(_:)),name:ReceiverInstance.reopen,object:String(ProcessInfo.processInfo.processIdentifier))
+        let menu=NSMenu(),applicationItem=NSMenuItem(),applicationMenu=NSMenu()
+        applicationMenu.addItem(NSMenuItem(title:MacText("Quit PocketTrackpad"),action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q"))
+        applicationItem.submenu=applicationMenu;menu.addItem(applicationItem);NSApp.mainMenu=menu
         window=NSWindow(contentRect:NSRect(x:0,y:0,width:440,height:500),styleMask:[.titled,.closable,.miniaturizable],backing:.buffered,defer:false)
         window.title="PocketTrackpad for Mac";window.delegate=self;window.isReleasedWhenClosed=false
         let title=NSTextField(labelWithString:"PocketTrackpad")
@@ -300,13 +313,18 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         let subtitle=NSTextField(wrappingLabelWithString:MacText("Your iPhone. Your Mac trackpad."))
         subtitle.textColor = .secondaryLabelColor;subtitle.frame=NSRect(x:30,y:408,width:380,height:26);window.contentView?.addSubview(subtitle)
         status=NSTextField(labelWithString:MacText("Waiting for iPhone"));status.alignment = .center;status.frame=NSRect(x:25,y:365,width:390,height:24);window.contentView?.addSubview(status)
+        latencyLabel=NSTextField(labelWithString:"");latencyLabel.alignment = .center
+        latencyLabel.font = .monospacedDigitSystemFont(ofSize:11,weight:.regular);latencyLabel.textColor = .secondaryLabelColor
+        latencyLabel.frame=NSRect(x:25,y:344,width:390,height:18)
+        latencyLabel.toolTip=MacText("Round-trip time between iPhone and Mac, not total input-to-display latency.")
+        window.contentView?.addSubview(latencyLabel)
         let qr=NSImageView(frame:NSRect(x:128,y:155,width:184,height:184));qr.imageScaling = .scaleProportionallyUpOrDown;window.contentView?.addSubview(qr)
         let hint=NSTextField(wrappingLabelWithString:MacText("Open PocketTrackpad on iPhone and scan this QR. Then choose Wi-Fi or Bluetooth."))
         hint.alignment = .center;hint.font = .systemFont(ofSize:13);hint.textColor = .secondaryLabelColor;hint.frame=NSRect(x:35,y:104,width:370,height:45);window.contentView?.addSubview(hint)
         let copy=NSButton(title:MacText("Copy pairing link"),target:self,action:#selector(copyPairing));copy.frame=NSRect(x:30,y:62,width:185,height:32);window.contentView?.addSubview(copy)
         let permission=NSButton(title:MacText("Enable Mac control"),target:self,action:#selector(enableControl));permission.frame=NSRect(x:225,y:62,width:185,height:32);window.contentView?.addSubview(permission)
         let note=NSTextField(labelWithString:MacText("Closing this window keeps the connection running."));note.font = .systemFont(ofSize:11);note.textColor = .secondaryLabelColor;note.frame=NSRect(x:30,y:25,width:290,height:22);window.contentView?.addSubview(note)
-        let quit=NSButton(title:MacText("Quit"),target:NSApp,action:#selector(NSApplication.terminate(_:)));quit.frame=NSRect(x:337,y:20,width:73,height:29);window.contentView?.addSubview(quit)
+        let quit=NSButton(title:MacText("Quit"),target:NSApp,action:#selector(NSApplication.terminate(_:)));quit.toolTip=MacText("Disconnect and quit PocketTrackpad");quit.frame=NSRect(x:337,y:20,width:73,height:29);window.contentView?.addSubview(quit)
         #if POCKET_LOCAL_TEST
         let testWheel=NSButton(title:"Test wheel",target:self,action:#selector(testWheel));testWheel.frame=NSRect(x:20,y:340,width:190,height:25);window.contentView?.addSubview(testWheel)
         let testPan=NSButton(title:"Test wheel + pan",target:self,action:#selector(testPan));testPan.frame=NSRect(x:220,y:340,width:190,height:25);window.contentView?.addSubview(testPan)
@@ -326,6 +344,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
             bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.bluetooth)})
         }catch{status.stringValue=MacText("Could not start. Reopen PocketTrackpad.")}
         permissionTimer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
+            self?.refreshLatency()
             self?.window.title=AXIsProcessTrusted() ? "PocketTrackpad for Mac":MacText("PocketTrackpad · Enable Mac control")
         }
     }
@@ -338,9 +357,17 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     func windowShouldClose(_ sender:NSWindow)->Bool{sender.orderOut(nil);return false}
     func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool{false}
     func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool{window.makeKeyAndOrderFront(nil);sender.activate(ignoringOtherApps:true);return false}
-    func applicationWillTerminate(_ notification:Notification){permissionTimer?.invalidate();_ = engine.handle(["type":"up"]);wifi=nil;bluetooth=nil}
+    func applicationWillTerminate(_ notification:Notification){DistributedNotificationCenter.default().removeObserver(self);permissionTimer?.invalidate();_ = engine.handle(["type":"up"]);wifi=nil;bluetooth=nil}
 }
 
 @main struct PocketTrackpadMain {
-    static func main(){let app=NSApplication.shared;let delegate=Host();app.delegate=delegate;app.run()}
+    static func main(){
+        let app=NSApplication.shared
+        if let existing=ReceiverInstance.existing() {
+            DistributedNotificationCenter.default().postNotificationName(ReceiverInstance.reopen,object:String(existing.processIdentifier),userInfo:nil,deliverImmediately:true)
+            existing.activate(options:[.activateAllWindows,.activateIgnoringOtherApps])
+            return
+        }
+        let delegate=Host();app.delegate=delegate;app.run()
+    }
 }

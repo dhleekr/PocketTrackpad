@@ -14,9 +14,11 @@ import Combine
     private var peer:CBCentral?,token:String?,nonce=""
     private var enabled=false,authenticated=false,hostVerified=false
     private var buffer=BLEFrames(),packets=[Data](),queue=[PadEvent]()
-    private var sent=[Int:Date](),sequence=0,lastReply=Date(),queuedAt=Date()
+    private var sent=[Int:TimeInterval]()
+    private var sequence=0,lastReply=Date(),queuedAt=Date()
     private var timer:Timer?
     private var frameTimer:Timer?
+    private var latencyReporter=LatencySnapshotReporter()
     private var sendWindow=BLESendWindow()
     private var advertiseStarted=Date()
     private var epoch=ConnectionEpoch()
@@ -105,7 +107,7 @@ import Combine
                 guard let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
                 diagnostics?.record(.ack,sequence:object["id"] as? Int)
                 lastReply=Date();ready=status=="ok";message=ready ? PTFormat("Bluetooth connected · %d ms",latencyMS):PTText("Check PocketTrackpad input permission on the Mac.")
-                if let id=object["id"] as? Int,let start=sent[id]{let ms=Date().timeIntervalSince(start)*1000;latencyMS=Int(ms);onLatency?(ms);sent=sent.filter{$0.key>id}}
+                if let id=object["id"] as? Int,let start=sent[id]{let ms=(ProcessInfo.processInfo.systemUptime-start)*1000;latencyMS=max(1,Int(ms.rounded()));onLatency?(ms);sent=sent.filter{$0.key>id}}
                 flush()
             }
         };peripheral.respond(to:first,withResult:.success)
@@ -142,7 +144,7 @@ import Combine
         sendWindow.didSend(at:now)
         let events=Array(queue.prefix(16));queue.removeFirst(events.count);sequence+=1
         diagnostics?.record(.sendStart,source:events.last?.t,count:events.count,pending:queue.count,sequence:sequence)
-        guard var data=try? JSONEncoder().encode(WiFiClient.Envelope(id:sequence,events:events)) else{return};data.append(10);sent[sequence]=Date();sent=sent.filter{$0.key>sequence-64};enqueue(data)
+        guard var data=try? JSONEncoder().encode(WiFiClient.Envelope(id:sequence,events:events,rttMS:latencyReporter.snapshot(milliseconds:latencyMS,at:now))) else{return};data.append(10);sent[sequence]=ProcessInfo.processInfo.systemUptime;sent=sent.filter{$0.key>sequence-64};enqueue(data)
     }
     func pause(){
         send([PadEvent(type:"up")]);enabled=false;timer?.invalidate();timer=nil;frameTimer?.invalidate();frameTimer=nil;manager?.stopAdvertising()
@@ -152,6 +154,6 @@ import Combine
             self.manager?.removeAllServices();self.clearSession()
         }
     }
-    private func clearSession(){sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
+    private func clearSession(){latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
     private func restart(_ text:String){clearSession();if enabled{advertise()};message=text}
 }

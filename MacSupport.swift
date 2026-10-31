@@ -1,4 +1,5 @@
 import Foundation
+import Cocoa
 import Security
 import Darwin
 
@@ -27,5 +28,17 @@ enum MacNetworkAddress {
             var host=[CChar](repeating:0,count:Int(NI_MAXHOST))
             if getnameinfo(addr,socklen_t(addr.pointee.sa_len),&host,socklen_t(host.count),nil,0,NI_NUMERICHOST)==0{return String(cString:host)}
         };return nil
+    }
+}
+
+enum ReceiverInstance {
+    static let reopen=Notification.Name("local.doohyun.pockettrackpad.reopen")
+    static func existing()->NSRunningApplication? {
+        let current=NSRunningApplication.current
+        return NSRunningApplication.runningApplications(withBundleIdentifier:Bundle.main.bundleIdentifier ?? "local.doohyun.pockettrackpad")
+            .filter{!$0.isTerminated && $0.processIdentifier != current.processIdentifier &&
+                (($0.launchDate ?? .distantPast)<(current.launchDate ?? .distantFuture) ||
+                 ($0.launchDate==current.launchDate && $0.processIdentifier<current.processIdentifier))}
+            .sorted{($0.launchDate ?? .distantPast)<($1.launchDate ?? .distantPast)}.first
     }
 }

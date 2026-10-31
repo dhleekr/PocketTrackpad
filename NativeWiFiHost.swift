@@ -46,6 +46,7 @@ final class NativeWiFiHost {
                         if let t=object["frameTime"] as? Double,t.isFinite{marker["t"]=t}
                         _ = self.apply(marker)
                     }
+                    if let value=LatencySnapshotReporter.value(in:object) {_ = self.apply(["type":"status","name":"connectionLatency","transport":"wifi","x":value])}
                     var status="ok";for event in events{if self.apply(event)=="permission"{status="permission"}}
                     self.send(["status":status,"id":number],id:id)
                 }
