@@ -19,7 +19,11 @@ final class InputEngine {
     private var lastMotion = Date.distantPast
     private var scrollStream=NativeScrollStream()
     private let eventLock = NSLock()
-    private let screens: [CGRect]
+    private var cursorBounds=CursorBounds(readDisplays:{
+        var ids=[CGDirectDisplayID](repeating:0,count:32),count:UInt32=0
+        guard CGGetActiveDisplayList(UInt32(ids.count),&ids,&count) == .success else{return []}
+        return ids.prefix(Int(count)).map{CGDisplayBounds($0)}
+    })
     private var watchdog: DispatchSourceTimer!
     private let playback=MotionPlayback()
     private let diagnostics=PadDiagnostics()
@@ -29,10 +33,6 @@ final class InputEngine {
     private var arrivalCadence=InputCadence(),sourceCadence=InputCadence(),renderCadence=InputCadence(),packetCadence=InputCadence(),sendCadence=InputCadence()
     private let timingFolder=FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/PocketTrackpad")
     init() {
-        var ids = [CGDirectDisplayID](repeating:0,count:32)
-        var count: UInt32 = 0
-        CGGetActiveDisplayList(32,&ids,&count)
-        screens = ids.prefix(Int(count)).map { CGDisplayBounds($0) }
         watchdog = DispatchSource.makeTimerSource(queue:DispatchQueue.global())
         watchdog.schedule(deadline:.now()+1,repeating:1)
         watchdog.setEventHandler { [weak self] in
@@ -72,10 +72,6 @@ final class InputEngine {
         playback.frame(at:ProcessInfo.processInfo.systemUptime){[self] event in
             renderCadence.record(ProcessInfo.processInfo.systemUptime);_ = applyEvent(event)
         }
-    }
-    private func clamp(_ target:CGPoint)->CGPoint {
-        if screens.contains(where:{$0.contains(target)}) { return target }
-        return screens.map { bounds in CGPoint(x:max(bounds.minX,min(bounds.maxX-0.01,target.x)),y:max(bounds.minY,min(bounds.maxY-0.01,target.y))) }.min { a,b in hypot(a.x-target.x,a.y-target.y)<hypot(b.x-target.x,b.y-target.y) } ?? target
     }
     private func releaseDrag() {
         playback.discard();if let cancelled=scrollStream.cancel(){NativeScrollStream.post(cancelled)}
@@ -146,7 +142,7 @@ final class InputEngine {
                     if magnifying && x != 0 { _ = PocketPostMagnify(x,2) }
                 }
             } else if kind == "move" {
-                let target = clamp(CGPoint(x:p.x+x,y:p.y+y))
+                let target = cursorBounds.clamp(CGPoint(x:p.x+x,y:p.y+y),at:ProcessInfo.processInfo.systemUptime)
                 cursorPosition=target; lastMotion=Date()
                 if let event=CGEvent(mouseEventSource:nil,mouseType:dragging ? .leftMouseDragged : .mouseMoved,mouseCursorPosition:target,mouseButton:.left) {
                     event.post(tap:.cghidEventTap)

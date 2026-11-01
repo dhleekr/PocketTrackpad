@@ -15,6 +15,8 @@ flowchart LR
 
 The iPhone recognizes gesture boundaries before transport. Relative motion may be coalesced while click, release, cancellation, and gesture phase boundaries are preserved. The Mac schedules continuous motion against a playback timeline rather than treating packet arrivals as display frames. Small displacements retain fractional precision. Timing and physical radio performance still depend on hardware and network conditions.
 
+The pointer uses Quartz desktop coordinates across active displays, including negative origins. `CursorBounds` refreshes the display layout within 250 ms of subsequent motion, so connecting, moving, resizing, or removing a display does not leave the background receiver constrained to its startup layout. Geometry is cached between refreshes to avoid a display query on every motion frame.
+
 ## Transport and pairing
 
 The Mac generates and retains a pairing key locally. Its QR carries the address and pairing material. Wi-Fi uses TLS pre-shared-key configuration through Network.framework. Bluetooth is a reverse connection: the phone advertises as a peripheral and the Mac scans as a central. CoreBluetooth link encryption and the application QR-key challenge protect Bluetooth pairing. Do not publish real pairing codes or diagnostic captures.
