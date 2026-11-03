@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. The iPhone release was submitted to App Store review. Existing testers can use TestFlight; the 1.2.0 feature update is being prepared for internal testing.
+1. Install the iPhone controller and the separate Mac receiver. The iPhone release was submitted to App Store review. Existing testers can install 1.2.0 (38) through TestFlight.
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
