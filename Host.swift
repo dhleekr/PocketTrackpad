@@ -169,13 +169,15 @@ final class InputEngine {
                 }
             } else if kind == "up" { releaseDrag()
             } else if kind == "text", let text = d["text"] as? String {
-                let chars = Array(text.utf16)
-                let event = CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:true)
-                chars.withUnsafeBufferPointer { event?.keyboardSetUnicodeString(stringLength:chars.count,unicodeString:$0.baseAddress) }
-                event?.post(tap:.cghidEventTap)
-                let up = CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:false)
-                chars.withUnsafeBufferPointer { up?.keyboardSetUnicodeString(stringLength:chars.count,unicodeString:$0.baseAddress) }
-                up?.post(tap:.cghidEventTap)
+                guard PadTextInput.valid(text) else{return "invalid"}
+                for chars in PadTextInput.keyboardChunks(text) {
+                    for down in [true,false] {
+                        let event=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:down)
+                        event?.flags=[]
+                        chars.withUnsafeBufferPointer{event?.keyboardSetUnicodeString(stringLength:chars.count,unicodeString:$0.baseAddress)}
+                        event?.post(tap:.cghidEventTap)
+                    }
+                }
             } else if kind == "shortcut", let name = d["name"] as? String {
                 let bindings:[String:(CGKeyCode,CGEventFlags)] = [
                     "back":(33,.maskCommand), "forward":(30,.maskCommand),
@@ -187,7 +189,11 @@ final class InputEngine {
                     "left":(123,[]), "right":(124,[]), "up":(126,[]), "down":(125,[]),
                     "spotlight":(49,.maskCommand), "showDesktop":(103,[]), "switchApp":(48,.maskCommand),
                     "play":(49,[]) ]
-                if name == "mission" {
+                if let key=PadQuickKey(rawValue:name){
+                    for event in MacQuickKeys.events(for:key){event.post(tap:.cghidEventTap)}
+                } else if ["notifications","apps"].contains(name){
+                    MacSystemActions.perform(name)
+                } else if name == "mission" {
                     // Invoke the system utility rather than depending on a configurable hotkey.
                     DispatchQueue.main.async {
                         NSWorkspace.shared.open(URL(fileURLWithPath:"/System/Applications/Mission Control.app"))

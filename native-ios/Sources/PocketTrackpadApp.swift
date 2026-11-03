@@ -17,6 +17,7 @@ struct PocketTrackpadApp:App {
                 if ProcessInfo.processInfo.arguments.contains("--ui-test-pad") {
                     DispatchQueue.main.asyncAfter(deadline:.now()+1){
                         client.showConnection=false
+                        if ProcessInfo.processInfo.arguments.contains("--ui-test-dictation"){DispatchQueue.main.asyncAfter(deadline:.now()+0.4){client.showDictation=true}}
                         if ProcessInfo.processInfo.arguments.contains("--ui-test-landscape") {
                             DispatchQueue.main.asyncAfter(deadline:.now()+0.5){client.toggleOrientation()}
                         }
@@ -34,6 +35,7 @@ struct PocketTrackpadApp:App {
                 }
             }
             .sheet(isPresented:$client.showConnection) { SettingsSheet(client:client) }
+            .sheet(isPresented:$client.showDictation){DictationSheet(client:client)}
         }
     }
 }
@@ -231,6 +233,7 @@ private struct GestureGuide:View {
             Section(PTText("Two fingers")) {
                 guide("Slide","Scroll in any direction. Swipe sideways to go back or forward in supported apps.")
                 guide("Tap","Right-click.")
+                guide("Swipe left from the right edge","Open Notification Center. Reverse before lifting to cancel.")
                 guide("Pinch","Zoom in apps that support trackpad zoom.")
             }
             Section {
@@ -238,6 +241,8 @@ private struct GestureGuide:View {
                 guide("Swipe down","App Exposé.")
                 guide("Swipe sideways","Switch desktops.")
             } header:{Text(PTText("Three fingers"))} footer:{Text(PTText("Available gestures depend on the Mac app and macOS settings."))}
+            Section(PTText("Four fingers")){guide("Pinch inward","Show installed apps. Spread back before lifting to cancel.")}
+            Section(PTText("Dictation")){guide("Microphone button","Speak, review the text, then enter it in the active Mac text field.")}
         }.navigationTitle(PTText("Gesture guide")).navigationBarTitleDisplayMode(.inline)
     }
     private func guide(_ title:String,_ detail:String)->some View {

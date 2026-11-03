@@ -17,6 +17,14 @@ The iPhone recognizes gesture boundaries before transport. Relative motion may b
 
 The pointer uses Quartz desktop coordinates across active displays, including negative origins. `CursorBounds` refreshes the display layout within 250 ms of subsequent motion, so connecting, moving, resizing, or removing a display does not leave the background receiver constrained to its startup layout. Geometry is cached between refreshes to avoid a display query on every motion frame.
 
+## Short commands and dictation
+
+`PadQuickKey` is the shared four-key contract for the phone labels, validated wire commands, and native Mac key codes. `MacQuickKeys` emits a complete modifier/key sequence; its regression checks inspect events without posting them and ensure Shift is released after Shift+Tab. Notification Center uses the system clock's Accessibility action; installed apps use the macOS Apps utility, with Launchpad as the older-system fallback. These open on gesture completion and can be cancelled before finger lift.
+
+The receiver advertises protocol 2 in authenticated responses. New controller features are gated on that capability, preserving the connection to older receivers. Text is a bounded, authenticated event with a receipt identifier. The phone clears its draft only after a Mac acknowledgment and does not retry automatically after an uncertain disconnect. The Mac sends Unicode in bounded chunks without splitting surrogate pairs or touching the clipboard. Some Mac applications can interpret synthetic text differently; physical-app verification remains necessary.
+
+Speech recognition uses the iPhone microphone only after an explicit user action and system authorization. On-device support is required; audio is held in memory, not written to a file or sent over the connection. Recording stops on interruption, backgrounding, disconnection, or dismissal. Partial recognition remains on the phone; text transfer is explicit and does not press Return. Diagnostic recordings contain event timing, not transcript contents.
+
 ## Transport and pairing
 
 The Mac generates and retains a pairing key locally. Its QR carries the address and pairing material. Wi-Fi uses TLS pre-shared-key configuration through Network.framework. Bluetooth is a reverse connection: the phone advertises as a peripheral and the Mac scans as a central. CoreBluetooth link encryption and the application QR-key challenge protect Bluetooth pairing. Do not publish real pairing codes or diagnostic captures.

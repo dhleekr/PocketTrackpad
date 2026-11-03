@@ -55,6 +55,7 @@ final class NativeWiFiHost {
         }
     }
     private func send(_ object:[String:Any],id:UUID){
+        var object=object;object["protocol"]=2
         guard let session=sessions[id],let data=try? JSONSerialization.data(withJSONObject:object),let frame=try? PadSecureLink.frame(data) else{return}
         session.connection.send(content:frame,completion:.contentProcessed{[weak self] error in if error != nil{self?.close(id)}})
     }

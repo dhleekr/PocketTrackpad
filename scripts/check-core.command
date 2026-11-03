@@ -9,6 +9,7 @@ compile_run() {
   swiftc -module-cache-path "$TASK_CACHE" "$@" -o "$TASK_CHECK/$name"
   "$TASK_CHECK/$name"
 }
+compile_run keys shared/BLEWire.swift MacQuickKeys.swift Tests/QuickKeys/main.swift
 compile_run displays CursorBounds.swift Tests/CursorBounds/main.swift
 compile_run connection ConnectionState.swift Tests/ConnectionState/main.swift
 compile_run gestures native-ios/Sources/GestureEngine.swift native-ios/Tests/main.swift

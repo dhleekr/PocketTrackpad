@@ -52,6 +52,7 @@ final class NativePadView:UIView {
         } else { engine.cancel();touchesByID=[:];link?.invalidate();link=nil }
     }
     private func configure() {
+        engine.surfaceWidth=Double(bounds.width)
         engine.sensitivity=client.sensitivity;engine.pressDelay=client.pressDelay;engine.doubleTapInterval=client.doubleTapInterval
         engine.pressClickEnabled=client.pressClick;engine.naturalScroll=client.naturalScroll
         let available=traitCollection.forceTouchCapability == .available
@@ -129,8 +130,11 @@ final class PadController:UIViewController {
     private let controls=UIStackView()
     private let lockButton=UIButton(type:.system)
     private let rotateButton=UIButton(type:.system)
+    private let microphoneButton=UIButton(type:.system)
     private let settingsButton=UIButton(type:.system)
-    private var controlBottom:NSLayoutConstraint!
+    private var controlTop:NSLayoutConstraint!
+    private let quickKeys=UIStackView()
+    private var keyButtons=[UIButton]()
     private var controlTrailing:NSLayoutConstraint!
     private var subscriptions=Set<AnyCancellable>()
     #if DEBUG
@@ -171,6 +175,10 @@ final class PadController:UIViewController {
         lockButton.accessibilityIdentifier="pad.lock"
         rotateButton.accessibilityIdentifier="pad.rotate"
         settingsButton.accessibilityIdentifier="pad.settings"
+        microphoneButton.accessibilityIdentifier="pad.dictation"
+        microphoneButton.accessibilityLabel=PTText("Dictation")
+        microphoneButton.setImage(UIImage(systemName:"mic"),for:.normal)
+        microphoneButton.addTarget(self,action:#selector(dictationTapped),for:.touchUpInside)
         rotateButton.setImage(UIImage(systemName:"rotate.right"),for:.normal)
         settingsButton.setImage(UIImage(systemName:"ellipsis"),for:.normal)
         lockButton.addTarget(self,action:#selector(lockTapped),for:.touchUpInside)
@@ -179,9 +187,29 @@ final class PadController:UIViewController {
         rotateButton.addTarget(self,action:#selector(rotateTapped),for:.touchUpInside)
         settingsButton.addTarget(self,action:#selector(settingsTapped),for:.touchUpInside)
         view.addSubview(controls)
-        controlBottom=controls.bottomAnchor.constraint(equalTo:view.bottomAnchor,constant:-12)
+        controlTop=controls.topAnchor.constraint(equalTo:view.topAnchor,constant:12)
         controlTrailing=controls.trailingAnchor.constraint(equalTo:view.trailingAnchor,constant:-12)
-        NSLayoutConstraint.activate([controlBottom,controlTrailing])
+        NSLayoutConstraint.activate([controlTop,controlTrailing])
+        quickKeys.axis = .horizontal;quickKeys.spacing=8;quickKeys.distribution = .fillEqually
+        quickKeys.translatesAutoresizingMaskIntoConstraints=false
+        for key in PadQuickKey.allCases {
+            let name=key.rawValue,title=key.title
+            let button=UIButton(type:.system);button.setTitle(title,for:.normal)
+            button.accessibilityIdentifier="pad.key."+name
+            button.accessibilityLabel=key.accessibilityTitle
+            button.titleLabel?.font = .monospacedSystemFont(ofSize:17,weight:.medium)
+            button.titleLabel?.adjustsFontSizeToFitWidth=true;button.titleLabel?.minimumScaleFactor=0.75
+            button.backgroundColor=UIColor(white:0.16,alpha:0.95);button.tintColor=UIColor(white:0.9,alpha:1)
+            button.layer.cornerRadius=15
+            button.addTarget(self,action:#selector(keyTapped(_:)),for:.touchUpInside)
+            keyButtons.append(button);quickKeys.addArrangedSubview(button)
+        }
+        microphoneButton.tintColor=UIColor(white:0.08,alpha:1)
+        microphoneButton.backgroundColor=UIColor(red:0.79,green:0.96,blue:0.36,alpha:1)
+        microphoneButton.layer.cornerRadius=30;quickKeys.addArrangedSubview(microphoneButton)
+        view.addSubview(quickKeys)
+        let desiredWidth=quickKeys.widthAnchor.constraint(equalTo:view.safeAreaLayoutGuide.widthAnchor,constant:-24);desiredWidth.priority = .defaultHigh
+        NSLayoutConstraint.activate([quickKeys.centerXAnchor.constraint(equalTo:view.safeAreaLayoutGuide.centerXAnchor),desiredWidth,quickKeys.widthAnchor.constraint(lessThanOrEqualToConstant:520),quickKeys.heightAnchor.constraint(equalToConstant:60),quickKeys.bottomAnchor.constraint(equalTo:view.safeAreaLayoutGuide.bottomAnchor,constant:-12)])
         client.$protected.removeDuplicates().sink{[weak self] protected in
             guard let self else{return}
             self.pad?.cancelForRotation()
@@ -201,7 +229,7 @@ final class PadController:UIViewController {
     override func viewDidLayoutSubviews(){
         super.viewDidLayoutSubviews()
         let insets=view.window?.safeAreaInsets ?? view.safeAreaInsets
-        controlBottom.constant = -max(12,insets.bottom+8)
+        controlTop.constant = max(12,insets.top+8)
         controlTrailing.constant = -max(12,insets.right+12)
     }
     private func updateControls(protected:Bool?=nil,landscape:Bool?=nil){
@@ -217,6 +245,12 @@ final class PadController:UIViewController {
     @objc private func lockTapped(){if !client.protected{client.toggleProtection()}}
     @objc private func unlockHeld(_ recognizer:UILongPressGestureRecognizer){if recognizer.state == .began,client.protected{client.toggleProtection()}}
     @objc private func rotateTapped(){pad?.cancelForRotation();client.toggleOrientation()}
+    @objc private func keyTapped(_ button:UIButton){
+        guard client.ready else{client.showConnection=true;return}
+        guard let name=button.accessibilityIdentifier?.split(separator:".").last else{return}
+        pad?.cancelForRotation();client.releaseInput();client.send([PadEvent(type:"shortcut",name:String(name))])
+    }
+    @objc private func dictationTapped(){pad?.cancelForRotation();client.releaseInput();client.showDictation=true}
     @objc private func settingsTapped(){pad?.cancelForRotation();client.releaseInput();client.showConnection=true}
 
     override func viewDidAppear(_ animated:Bool) {
@@ -232,10 +266,10 @@ final class PadController:UIViewController {
     private func controlHits()->[String:Any] {
         guard let window=view.window else{return ["error":"no window"]}
         var result=[String:Any]()
-        for button in [lockButton,rotateButton,settingsButton] {
+        for button in [lockButton,rotateButton,microphoneButton,settingsButton]+keyButtons {
             let frame=button.convert(button.bounds,to:window)
             var hits=0
-            for x in [4.0,12,22,32,40] {for y in [4.0,12,22,32,40] {
+            for x in [4.0,frame.width*0.25,frame.width*0.5,frame.width*0.75,frame.width-4] {for y in [4.0,frame.height*0.25,frame.height*0.5,frame.height*0.75,frame.height-4] {
                 let actual=window.hitTest(CGPoint(x:frame.minX+x,y:frame.minY+y),with:nil)
                 if actual === button || actual?.isDescendant(of:button)==true {hits+=1}
             }}

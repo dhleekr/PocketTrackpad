@@ -169,5 +169,35 @@ test("press timer does not change movement gain at the next touch sample") {
     a.update(one(110),at:0.016);b.update(one(110),at:0.016)
     return ae()==be()
 }
+func edgePair(_ x:Double=375,_ y:Double=180)->[Int:PadPoint] {[1:PadPoint(x:x,y:y),2:PadPoint(x:x+5,y:y+50)]}
+func fourPinch(_ radius:Double=100,dx:Double=0)->[Int:PadPoint] {
+ [1:PadPoint(x:200-radius+dx,y:300-radius),2:PadPoint(x:200+radius+dx,y:300-radius),3:PadPoint(x:200-radius+dx,y:300+radius),4:PadPoint(x:200+radius+dx,y:300+radius)]
+}
+test("right-edge two-finger swipe opens notifications once without scrolling") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.update(edgePair(),at:0);e.update(edgePair(310),at:0.15);e.update([:],at:0.2)
+ return events()==[PadEvent(type:"shortcut",name:"notifications")]
+}
+test("four-finger pinch opens installed apps without zooming or desktop swipe") {
+ let(e,events)=fixture();e.update(fourPinch(),at:0);e.update(fourPinch(55),at:0.15);e.update([:],at:0.2)
+ return events()==[PadEvent(type:"shortcut",name:"apps")]
+}
+test("reversing an edge swipe cancels notifications") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.update(edgePair(),at:0);e.update(edgePair(310),at:0.1);e.update(edgePair(),at:0.2);e.update([:],at:0.25);return events().isEmpty
+}
+test("central horizontal scroll remains page navigation") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.update(edgePair(200),at:0);e.update(edgePair(120),at:0.1);e.update([:],at:0.4);return events().contains{$0.type=="scroll"} && !events().contains{$0.type=="shortcut"}
+}
+test("vertical scroll at edge is not consumed") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.update(edgePair(),at:0);e.update(edgePair(375,130),at:0.1);e.update([:],at:0.4);return events().contains{$0.type=="scroll"} && !events().contains{$0.type=="shortcut"}
+}
+test("edge swipe with staggered finger lifts opens only once") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.update(edgePair(),at:0);e.update(edgePair(310),at:0.1);e.update([1:PadPoint(x:310,y:180)],at:0.15);e.update([1:PadPoint(x:375,y:180)],at:0.18);e.update([:],at:0.2);return events()==[PadEvent(type:"shortcut",name:"notifications")]
+}
+test("spreading back cancels four finger apps pinch") {
+ let(e,events)=fixture();e.update(fourPinch(),at:0);e.update(fourPinch(55),at:0.1);e.update(fourPinch(),at:0.2);e.update([:],at:0.3);return events().isEmpty
+}
+test("cancelled apps pinch never opens apps") {
+ let(e,events)=fixture();e.update(fourPinch(),at:0);e.update(fourPinch(55),at:0.1);e.cancel();e.update([:],at:0.3);return events().isEmpty
+}
 print("Native gesture checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

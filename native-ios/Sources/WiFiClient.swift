@@ -88,6 +88,8 @@ final class WiFiClient:NSObject,ObservableObject {
                     guard let self,self.generation==current else { return }
                     guard let reply=try JSONSerialization.jsonObject(with:payload) as? [String:Any],let status=reply["status"] as? String else { throw URLError(.cannotParseResponse) }
                     self.lastReply=Date()
+                    if let version=reply["protocol"] as? Int {self.extendedInput=version>=2}
+                    if let id=reply["id"] as? Int,let token=self.textReceipts.removeValue(forKey:id){self.onTextAck?(token,status=="ok")}
                     self.diagnostics?.record(.ack,sequence:reply["id"] as? Int)
                     if let id=reply["id"] as? Int,let start=self.sent[id] {
                         let ms=(ProcessInfo.processInfo.systemUptime-start)*1000
@@ -115,6 +117,9 @@ final class WiFiClient:NSObject,ObservableObject {
             }
         }
     }
+    private(set) var extendedInput=false
+    var onTextAck:((String,Bool)->Void)?
+    private var textReceipts=[Int:String]()
     func send(_ events:[PadEvent]) {
         guard ready else { return }
         diagnostics?.record(.enqueue,source:events.last?.t,count:events.count,pending:queue.count)
@@ -140,6 +145,7 @@ final class WiFiClient:NSObject,ObservableObject {
         guard !sendBusy,let socket,!queue.isEmpty else { return }
         let events=Array(queue.prefix(64));queue.removeFirst(events.count);sequence+=1
         let id=sequence,current=generation
+        if let text=events.first(where:{$0.type=="text"}){textReceipts[id]=text.name}
         diagnostics?.record(.sendStart,source:events.last?.t,count:events.count,pending:queue.count,sequence:id)
         guard let data=try? JSONEncoder().encode(Envelope(id:id,events:events,rttMS:latencyReporter.snapshot(milliseconds:latencyMS,at:ProcessInfo.processInfo.systemUptime))),let text=String(data:data,encoding:.utf8) else { return }
         sendBusy=true;sent[id]=ProcessInfo.processInfo.systemUptime
@@ -167,7 +173,7 @@ final class WiFiClient:NSObject,ObservableObject {
     }
     func disconnect() {
         diagnostics?.record(.disconnected)
-        generation=UUID();ready=false;heartbeat?.invalidate();heartbeat=nil;receiveTask?.cancel();receiveTask=nil
+        extendedInput=false;textReceipts=[:];generation=UUID();ready=false;heartbeat?.invalidate();heartbeat=nil;receiveTask?.cancel();receiveTask=nil
         socket?.cancel();socket=nil
         sendBusy=false;queue=[];sent=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter()
     }

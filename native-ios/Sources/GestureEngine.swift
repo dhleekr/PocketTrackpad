@@ -26,14 +26,16 @@ struct PadEvent: Codable, Equatable {
     var count: Int? = nil
     var name: String? = nil
     var t: Double? = nil
+    var text: String? = nil
 }
 
 enum PadHapticKind { case tap,press,release,gesture }
 
 final class GestureEngine {
-    enum Mode { case pending, scroll, pinch, drag, swipe }
+    enum Mode { case pending, scroll, pinch, drag, swipe, system }
     var emit: ([PadEvent])->Void = { _ in }
     var haptic: (PadHapticKind)->Void = { _ in }
+    var surfaceWidth=0.0
     var sensitivity = 1.6
     var doubleTapInterval=0.5
     var pressDelay = 0.16
@@ -52,6 +54,9 @@ final class GestureEngine {
     private var travel = 0.0
     private var dxTotal = 0.0
     private var dyTotal = 0.0
+    private var edgeCandidate=false
+    private var systemAction:String?
+    private var initialSpan=0.0,currentSpan=0.0
     private var initialGap = 0.0
     private var previousGap = 0.0
     private var scrollStarted = false
@@ -72,6 +77,18 @@ final class GestureEngine {
         guard values.count==2 else { return 0 }
         let a=Array(values.values)
         return hypot(a[0].x-a[1].x,a[0].y-a[1].y)
+    }
+    private func nearRightEdge(_ values:[Int:PadPoint])->Bool {
+        surfaceWidth>0 && values.count==2 && values.values.allSatisfy{$0.x>=surfaceWidth-min(48,max(28,surfaceWidth*0.1))}
+    }
+    private func span(_ values:[Int:PadPoint])->Double {
+        let center=centroid(values)
+        return values.values.reduce(0){$0+hypot($1.x-center.x,$1.y-center.y)}/Double(values.count)
+    }
+    private func finishSystem() {
+        let commit=systemAction=="notifications" ? dxTotal < -48 : (initialSpan>0 && currentSpan/initialSpan<0.78)
+        if commit,let action=systemAction {emit([PadEvent(type:"shortcut",name:action)]);haptic(.gesture)}
+        systemAction=nil;edgeCandidate=false
     }
     private func stopInertia() {
         if inertia != nil { emit([PadEvent(type:"scroll",x:0,y:0,phase:"ended",momentum:"ended")]) }
@@ -116,6 +133,7 @@ final class GestureEngine {
                 up()
                 if !doubleTapDragging && peakCount==1 && travel<6 && now-start<0.32 {lastTap=(now,previous)}else{lastTap=nil}
             }
+            else if mode == .system {finishSystem()}
             else if mode == .swipe { finishDock(cancelled:false,at:now) }
             else if mode == .pinch { emit([PadEvent(type:"magnify",x:0,phase:"ended")]) }
             else if scrollStarted {
@@ -140,10 +158,12 @@ final class GestureEngine {
             if incoming.count != 1 {lastTap=nil}
             stopInertia();points=incoming;previous=c;start=now;last=now;peakCount=incoming.count
             travel=0;dxTotal=0;dyTotal=0;gainSpeed=0;scrollStarted=false;velocityX=0;velocityY=0
+            edgeCandidate=nearRightEdge(incoming);systemAction=nil;initialSpan=span(incoming);currentSpan=initialSpan
             initialGap=gap(incoming);previousGap=initialGap;swipeFired=false;dockAxis=0;dockProgress=0;dockVelocity=0;mode = .pending
             return
         }
         if Set(points.keys) != Set(incoming.keys) {
+            if mode == .system {points=incoming;previous=c;last=now;return}
             if mode == .swipe {points=incoming;previous=c;last=now;return}
             if mode == .pinch,incoming.count==1,points.count==2 {
                 points=incoming;previous=c;last=now;return
@@ -161,10 +181,16 @@ final class GestureEngine {
             if incoming.count>=3 && held { up() }
             // Preserve swipe consumption until every finger is lifted.
             if !held { mode = swipeFired ? .swipe:.pending;dxTotal=0;dyTotal=0;initialGap=gap(incoming);previousGap=initialGap }
+            edgeCandidate=nearRightEdge(incoming);initialSpan=span(incoming);currentSpan=initialSpan
             points=incoming;previous=c;last=now;return
         }
+        if mode == .system && incoming.count<peakCount {points=incoming;previous=c;last=now;return}
         let dx=c.x-previous.x,dy=c.y-previous.y,dt=max(0.001,now-last)
         points=incoming;previous=c;last=now;travel+=hypot(dx,dy);dxTotal+=dx;dyTotal+=dy
+        if mode == .system {
+            if systemAction=="apps",incoming.count==4{currentSpan=span(incoming)}
+            return
+        }
         if held { move(dx,dy,dt:dt);return }
         if incoming.count==1 && peakCount==1 {
             let force=incoming.values.first!.force
@@ -176,6 +202,13 @@ final class GestureEngine {
             else { move(dx,dy,dt:dt) }
         } else if incoming.count==2 && peakCount==2 {
             let spacing=gap(incoming),translation=hypot(dxTotal,dyTotal),pinch=spacing-initialGap
+            if edgeCandidate && mode == .pending {
+                if dxTotal < -12 && -dxTotal>abs(dyTotal)*1.4 && translation>abs(pinch) {
+                    mode = .system;systemAction="notifications";lastTap=nil;return
+                }
+                if translation<12 && abs(pinch)<12{return}
+                edgeCandidate=false
+            }
             if (mode == .pending || mode == .scroll),abs(pinch)>12 && abs(pinch)>translation*1.5 {
                 if scrollStarted {emit([PadEvent(type:"scroll",x:0,y:0,phase:"ended",momentum:"none")]);scrollStarted=false}
                 mode = .pinch;previousGap=initialGap;emit([PadEvent(type:"magnify",x:0,phase:"began")])
@@ -203,6 +236,13 @@ final class GestureEngine {
             }
             previousGap=spacing
         } else if incoming.count>=3 {
+            if incoming.count==4 && mode == .pending {
+                currentSpan=span(incoming)
+                let contraction=initialSpan-currentSpan
+                if initialSpan>=24 && contraction>14 && currentSpan/initialSpan<0.85 && contraction>hypot(dxTotal,dyTotal)*0.8 {
+                    mode = .system;systemAction="apps";lastTap=nil;return
+                }
+            }
             let ax=abs(dxTotal),ay=abs(dyTotal)
             if dockAxis==0 {
                 if ay>12 && ay>ax*1.25 {dockAxis=2}
@@ -232,6 +272,7 @@ final class GestureEngine {
         value.began=true;inertia=value
     }
     func cancel() {
+        systemAction=nil;edgeCandidate=false
         finishDock(cancelled:true,at:last)
         if mode == .pinch { emit([PadEvent(type:"magnify",x:0,phase:"cancelled")]) }
         if scrollStarted { emit([PadEvent(type:"scroll",x:0,y:0,phase:"cancelled",momentum:"none")]) }

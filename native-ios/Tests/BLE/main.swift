@@ -72,5 +72,24 @@ test("latency metadata is sent no more than once per second") {
  var reporter=LatencySnapshotReporter()
  return reporter.snapshot(milliseconds:0,at:1) == nil && reporter.snapshot(milliseconds:20,at:1) == 20 && reporter.snapshot(milliseconds:21,at:1.1) == nil && reporter.snapshot(milliseconds:21,at:2) == 21
 }
+test("new system shortcuts pass the authenticated wire validator") {BLEWire.valid([["type":"shortcut","name":"notifications"],["type":"shortcut","name":"apps"]])}
+test("dictation validates bounded unicode and an operation identifier") {BLEWire.valid([["type":"text","name":UUID().uuidString,"text":"안녕하세요 Hello 👩🏽‍💻"]])}
+test("dictation rejects malformed or oversized input") {
+ let invalid:[Any]=["",String(repeating:"가",count:1025),"x\u{0000}",false]
+ return invalid.allSatisfy{!BLEWire.valid([["type":"text","name":UUID().uuidString,"text":$0]])} && !BLEWire.valid([["type":"text","text":"hello"]])
+}
+test("keyboard chunks round-trip unicode without splitting surrogate pairs") {
+ let value=String(repeating:"한글 é 👩🏽‍💻 ",count:30),chunks=PadTextInput.keyboardChunks(value)
+ return chunks.allSatisfy{$0.count<=20 && String(decoding:$0,as:UTF16.self).utf16.count==$0.count} && chunks.map{String(decoding:$0,as:UTF16.self)}.joined()==value
+}
+test("four-key interface is Escape Tab Shift-Tab Enter in order") {
+ PadQuickKey.allCases.map(\.rawValue)==["escape","tab","shiftTab","enter"] && PadQuickKey.allCases.allSatisfy{BLEWire.valid([["type":"shortcut","name":$0.rawValue]])}
+}
+test("Shift-Tab posts Tab with Shift while plain Tab has no modifier") {
+ PadQuickKey.shiftTab.keyCode==48 && PadQuickKey.shiftTab.shift && PadQuickKey.tab.keyCode==48 && !PadQuickKey.tab.shift && !PadQuickKey.enter.shift && !PadQuickKey.escape.shift
+}
+test("removed arrow quick keys are not accepted by the wire") {
+ !BLEWire.valid([["type":"shortcut","name":"up"]]) && !BLEWire.valid([["type":"shortcut","name":"down"]])
+}
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

@@ -9,8 +9,8 @@ enum BLEWire {
     static let reverseService="7647DA30-730B-49AA-AB58-7812CE562410"
     static let maxFrame=16384
     static func valid(_ events:[[String:Any]])->Bool {
-        let types:Set<String>=["move","scroll","magnify","dockSwipe","click","double","right","down","up","shortcut","status"]
-        let shortcuts:Set<String>=["mission","appWindows","desktopLeft","desktopRight"]
+        let types:Set<String>=["move","scroll","magnify","dockSwipe","click","double","right","down","up","shortcut","status","text"]
+        let shortcuts=Set(["mission","appWindows","desktopLeft","desktopRight","notifications","apps"]+PadQuickKey.allCases.map(\.rawValue))
         guard (1...64).contains(events.count) else {return false}
         for e in events {
             guard let t=e["type"] as? String,types.contains(t) else {return false}
@@ -30,6 +30,7 @@ enum BLEWire {
                 guard let x=e["x"] as? NSNumber,x.doubleValue.isFinite,abs(x.doubleValue)<=1,
                     let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
             }
+            if t=="text" {guard let text=e["text"] as? String,PadTextInput.valid(text),let name=e["name"] as? String,UUID(uuidString:name) != nil else{return false}}
             if t=="shortcut" {guard let n=e["name"] as? String,shortcuts.contains(n) else {return false}}
             if let value=e["phase"] {guard let p=value as? String,Set(["began","changed","ended","cancelled"]).contains(p) else{return false}}
             if let value=e["momentum"] {guard let p=value as? String,Set(["none","began","changed","ended"]).contains(p) else{return false}}
@@ -138,4 +139,31 @@ struct LatencySnapshotReporter {
         let value=number.doubleValue
         return value.isFinite && value>0 && value<=60000 ? value:nil
     }
+}
+
+/// Bounded text payloads keep dictation within both transports' existing frame limits.
+enum PadTextInput {
+    static func valid(_ text:String)->Bool {
+        !text.isEmpty && text.utf16.count<=1024 && text.utf8.count<=4096 &&
+        !text.unicodeScalars.contains{($0.value<0x20 && $0.value != 10 && $0.value != 9) || (0x7f...0x9f).contains($0.value)}
+    }
+    static func keyboardChunks(_ text:String)->[[UInt16]] {
+        var chunks=[[UInt16]](),current=[UInt16]()
+        for scalar in text.unicodeScalars {
+            let units=Array(String(scalar).utf16)
+            if current.count+units.count>20{chunks.append(current);current=[]}
+            current+=units
+        }
+        if !current.isEmpty{chunks.append(current)}
+        return chunks
+    }
+}
+
+/// The phone labels and Mac key mapping share the same four-key contract.
+enum PadQuickKey:String,CaseIterable {
+    case escape,tab,shiftTab,enter
+    var title:String {switch self{case .escape:return "Esc";case .tab:return "Tab";case .shiftTab:return "⇧ Tab";case .enter:return "Enter"}}
+    var accessibilityTitle:String {self == .shiftTab ? "Shift+Tab":title}
+    var keyCode:UInt16 {switch self{case .escape:return 53;case .tab,.shiftTab:return 48;case .enter:return 36}}
+    var shift:Bool {self == .shiftTab}
 }

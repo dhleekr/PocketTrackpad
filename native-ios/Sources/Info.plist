@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.1.3</string>
+	<string>1.2.0</string>
 	<key>CFBundleVersion</key>
-	<string>36</string>
+	<string>38</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -56,5 +56,9 @@
 	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Use the microphone only when you start dictation. Audio is recognized on this iPhone.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Turn your speech into text on this iPhone, then send the text to your paired Mac when you choose.</string>
 </dict>
 </plist>

@@ -105,6 +105,8 @@ import Combine
                     authenticated=true;manager?.stopAdvertising()
                 }
                 guard let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
+                if let version=object["protocol"] as? Int{extendedInput=version>=2}
+                if let id=object["id"] as? Int,let token=textReceipts.removeValue(forKey:id){onTextAck?(token,status=="ok")}
                 diagnostics?.record(.ack,sequence:object["id"] as? Int)
                 lastReply=Date();ready=status=="ok";message=ready ? PTFormat("Bluetooth connected · %d ms",latencyMS):PTText("Check PocketTrackpad input permission on the Mac.")
                 if let id=object["id"] as? Int,let start=sent[id]{let ms=(ProcessInfo.processInfo.systemUptime-start)*1000;latencyMS=max(1,Int(ms.rounded()));onLatency?(ms);sent=sent.filter{$0.key>id}}
@@ -121,6 +123,9 @@ import Combine
     }
     private func pump(){guard let manager,let input,let peer else{return};while let data=packets.first{guard manager.updateValue(data,for:input,onSubscribedCentrals:[peer]) else{return};packets.removeFirst();diagnostics?.record(.sendComplete,count:data.count,pending:packets.count)}}
     func peripheralManagerIsReady(toUpdateSubscribers peripheral:CBPeripheralManager){guard peripheral === manager else{return};pump();flush()}
+    private(set) var extendedInput=false
+    var onTextAck:((String,Bool)->Void)?
+    private var textReceipts=[Int:String]()
     func send(_ events:[PadEvent]){
         guard authenticated,ready || events.allSatisfy({$0.type=="status" || $0.type=="up"}) else{return}
         diagnostics?.record(.enqueue,source:events.last?.t,count:events.count,pending:queue.count)
@@ -143,6 +148,7 @@ import Combine
         guard sendWindow.canSend(at:now,outstanding:sent.count,urgent:urgent) else{return}
         sendWindow.didSend(at:now)
         let events=Array(queue.prefix(16));queue.removeFirst(events.count);sequence+=1
+        if let text=events.first(where:{$0.type=="text"}){textReceipts[sequence]=text.name}
         diagnostics?.record(.sendStart,source:events.last?.t,count:events.count,pending:queue.count,sequence:sequence)
         guard var data=try? JSONEncoder().encode(WiFiClient.Envelope(id:sequence,events:events,rttMS:latencyReporter.snapshot(milliseconds:latencyMS,at:now))) else{return};data.append(10);sent[sequence]=ProcessInfo.processInfo.systemUptime;sent=sent.filter{$0.key>sequence-64};enqueue(data)
     }
@@ -154,6 +160,6 @@ import Combine
             self.manager?.removeAllServices();self.clearSession()
         }
     }
-    private func clearSession(){latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
+    private func clearSession(){extendedInput=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
     private func restart(_ text:String){clearSession();if enabled{advertise()};message=text}
 }

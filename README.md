@@ -4,15 +4,17 @@
 
 ### Your Mac. In your hand.
 
-An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface, with the controls you need within reach.
+An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four keys—Esc, Tab, Shift+Tab, Enter—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.1.4.zip) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.2.0.zip) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
+![Four-key trackpad controller in landscape](docs/assets/controller.png)
+
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. The iPhone release is currently awaiting App Store review; it is not publicly available yet.
+1. Install the iPhone controller and the separate Mac receiver. The iPhone release was submitted to App Store review. Existing testers can use TestFlight; the 1.2.0 feature update is being prepared for internal testing.
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -25,6 +27,14 @@ The first connection screen explains that both apps are required and links direc
 
 The Mac window shows the current connection round-trip time in milliseconds. This is the iPhone-to-Mac-to-iPhone transport round trip, not total finger-to-display latency. Both apps must be updated for the measurement; stale readings are cleared.
 
+## Four keys and a microphone
+
+The bottom row sends **Esc, Tab, Shift+Tab, and Enter** to the focused Mac app. Their meaning follows that app: Escape can dismiss or interrupt, Tab can navigate or complete, Shift+Tab can move backward or cycle Claude Code permission modes, and Enter can submit or confirm. The controller does not automatically approve prompts or press Enter after dictation.
+
+Tap the microphone to dictate a short instruction in Korean or English. Review up to three lines, expand editing only when needed, and insert the text into the selected Mac field. Use Enter separately when ready to submit. Recognition requires on-device support for the selected language; the app does not fall back to server-based speech recognition, save audio files, or send audio to the Mac. Only the confirmed text is sent over the paired connection. An uncertain delivery is never automatically retried.
+
+Both apps need version 1.2.0 or later for the new keys, Notification Center, Apps gesture, and dictation. The controller detects older receivers and asks for an update instead of sending unsupported commands.
+
 ## A familiar set of gestures
 
 | Touch | Action |
@@ -33,6 +43,8 @@ The Mac window shows the current connection round-trip time in milliseconds. Thi
 | Double-tap, hold the second tap | Drag immediately; lift to release |
 | Two fingers | Momentum scrolling; page history and pinch zoom in supporting apps |
 | Two-finger tap | Right-click |
+| Two fingers inward from the right edge | Open Notification Center on lift; reverse to cancel |
+| Four-finger pinch inward | Show installed apps on lift; spread back to cancel |
 | Three-finger swipe | Mission Control, App Exposé, or desktop switching |
 
 Adjust cursor speed, natural scrolling, double-tap timing, press delay, and haptic behavior. Rotate the surface with the rotation button. The lock button defers system edge gestures; hold it to unlock. It cannot completely disable iOS Home or Control Center gestures.
@@ -98,6 +110,8 @@ The first command exercises gesture recognition, wire validation, motion playbac
 native-ios/       iPhone app, Xcode project, gesture tests
 shared/           Framing, secure connection setup, Bluetooth wire format
 Host.swift        Native Mac receiver and input application
+MacQuickKeys.swift
+MacSystemActions.swift
 ConnectionState.swift
 CursorBounds.swift
 MotionPlayback.swift

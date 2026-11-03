@@ -30,6 +30,7 @@ import UIKit
     @Published var ready=false
     @Published var message=PTText("Mac QR로 연결하세요.")
     @Published var latencyMS=0
+    @Published var showDictation=false
     @Published var showConnection=true
     @Published var pressureAvailable=false
     @Published var sensitivity=1.6 {didSet{UserDefaults.standard.set(sensitivity,forKey:"pad.sensitivity")}}
@@ -49,6 +50,8 @@ import UIKit
     private var reverse=BLEPeripheralClient()
     private var subscriptions=Set<AnyCancellable>()
     init(){
+        wifi.onTextAck={[weak self] id,ok in self?.finishText(id:id,ok:ok)}
+        reverse.onTextAck={[weak self] id,ok in self?.finishText(id:id,ok:ok)}
         wifi.diagnostics=diagnostics;reverse.diagnostics=diagnostics
         doubleTapInterval=PadTuning.saved("pad.doubleTapInterval",default:0.5,range:PadTuning.doubleTapRange)
         sensitivity=PadTuning.saved("pad.sensitivity",default:1.6,range:PadTuning.speedRange)
@@ -60,7 +63,7 @@ import UIKit
         reverse.$message.throttle(for:.milliseconds(200),scheduler:RunLoop.main,latest:true).sink{[weak self] v in guard let self,self.transport == .bluetooth else{return};self.message=v}.store(in:&subscriptions)
         reverse.$latencyMS.throttle(for:.milliseconds(200),scheduler:RunLoop.main,latest:true).sink{[weak self] v in if self?.transport == .bluetooth {self?.latencyMS=v}}.store(in:&subscriptions)
     }
-    private func updateReady(_ value:Bool){ready=value;if !value {showConnection=true}}
+    private func updateReady(_ value:Bool){ready=value;if !value {if let id=textID{finishText(id:id,ok:false)};showConnection=true}}
     func start(){resumeConnection()}
     func resumeConnection(){
         if transport == .wifi {wifi.start();updateReady(wifi.ready)}
@@ -69,6 +72,7 @@ import UIKit
     func releaseInput(){send([PadEvent(type:"up")])}
     private var pairingToken:String? {guard let address=wifi.pairingAddress else{return nil};return (try? PairingEndpoint(address))?.token}
     func selectTransport(){
+        if let id=textID{finishText(id:id,ok:false)}
         if transport == .wifi {reverse.pause();ready=false;message=PTText("Wi-Fi 연결 중…");wifi.reconnect()}
         else {wifi.pause();ready=false;reverse.start(token:pairingToken);message=reverse.message}
         showConnection=true
@@ -80,6 +84,26 @@ import UIKit
     }
     func forgetMac(){reverse.pause();wifi.forgetPairing();ready=false;showConnection=true;message=PTText("Mac QR로 연결하세요.")}
     func reconnect(){if transport == .wifi {wifi.reconnect()}else {reverse.reconnect(token:pairingToken)}}
-    func send(_ events:[PadEvent]){if transport == .wifi {wifi.send(events)}else {reverse.send(events)}}
-    func pause(){if transport == .wifi {wifi.pause()}else {reverse.pause()};ready=false}
+    var extendedInput:Bool {transport == .wifi ? wifi.extendedInput:reverse.extendedInput}
+    private var textID:String?
+    private var textCompletion:((Bool)->Void)?
+    func sendText(_ text:String,completion:@escaping (Bool)->Void) {
+        guard ready,extendedInput,textID==nil,PadTextInput.valid(text) else{completion(false);return}
+        let id=UUID().uuidString;textID=id;textCompletion=completion
+        send([PadEvent(type:"text",name:id,text:text)])
+        DispatchQueue.main.asyncAfter(deadline:.now()+10){[weak self] in
+            guard let self,self.textID==id else{return}
+            // Do not retry text automatically: an acknowledgment can be lost after delivery.
+            self.finishText(id:id,ok:false);self.pause()
+        }
+    }
+    private func finishText(id:String,ok:Bool){
+        guard textID==id else{return};let completion=textCompletion;textID=nil;textCompletion=nil;completion?(ok)
+    }
+    func send(_ events:[PadEvent]){
+        if events.contains(where:{$0.type=="text" || ($0.type=="shortcut" && (["notifications","apps"].contains($0.name ?? "") || PadQuickKey(rawValue:$0.name ?? "") != nil))}) && !extendedInput {
+            message=PTText("Update the Mac app to use these features.");showConnection=true;return
+        }
+        if transport == .wifi {wifi.send(events)}else {reverse.send(events)}}
+    func pause(){if let id=textID{finishText(id:id,ok:false)};if transport == .wifi {wifi.pause()}else {reverse.pause()};ready=false}
 }

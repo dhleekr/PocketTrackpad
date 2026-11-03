@@ -2,3 +2,6 @@
 "NSCameraUsageDescription" = "Mac 연결 QR을 스캔합니다. 촬영 영상은 저장하거나 전송하지 않습니다.";
 "NSLocalNetworkUsageDescription" = "같은 Wi-Fi 네트워크의 Mac으로 트랙패드 입력을 전송합니다.";
 "CFBundleDisplayName" = "트랙패드";
+
+"NSMicrophoneUsageDescription" = "녹음을 시작할 때만 마이크를 사용하며 음성은 아이폰 안에서 인식합니다.";
+"NSSpeechRecognitionUsageDescription" = "말한 내용을 아이폰 안에서 텍스트로 바꾼 뒤, 직접 전송할 때만 연결된 Mac에 보냅니다.";
