@@ -88,7 +88,7 @@ final class WiFiClient:NSObject,ObservableObject {
                     guard let self,self.generation==current else { return }
                     guard let reply=try JSONSerialization.jsonObject(with:payload) as? [String:Any],let status=reply["status"] as? String else { throw URLError(.cannotParseResponse) }
                     self.lastReply=Date()
-                    if let version=reply["protocol"] as? Int {self.extendedInput=version>=2}
+                    if let version=reply["protocol"] as? Int {self.extendedInput=version>=2;self.customKeys=version>=3;self.gestureOptions=version>=4;self.remoteMicrophone=version>=5;self.continuousSystemGestures=version>=6}
                     if let id=reply["id"] as? Int,let token=self.textReceipts.removeValue(forKey:id){self.onTextAck?(token,status=="ok")}
                     self.diagnostics?.record(.ack,sequence:reply["id"] as? Int)
                     if let id=reply["id"] as? Int,let start=self.sent[id] {
@@ -118,6 +118,10 @@ final class WiFiClient:NSObject,ObservableObject {
         }
     }
     private(set) var extendedInput=false
+    private(set) var customKeys=false
+    private(set) var gestureOptions=false
+    private(set) var remoteMicrophone=false
+    private(set) var continuousSystemGestures=false
     var onTextAck:((String,Bool)->Void)?
     private var textReceipts=[Int:String]()
     func send(_ events:[PadEvent]) {
@@ -173,7 +177,7 @@ final class WiFiClient:NSObject,ObservableObject {
     }
     func disconnect() {
         diagnostics?.record(.disconnected)
-        extendedInput=false;textReceipts=[:];generation=UUID();ready=false;heartbeat?.invalidate();heartbeat=nil;receiveTask?.cancel();receiveTask=nil
+        extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];generation=UUID();ready=false;heartbeat?.invalidate();heartbeat=nil;receiveTask?.cancel();receiveTask=nil
         socket?.cancel();socket=nil
         sendBusy=false;queue=[];sent=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter()
     }

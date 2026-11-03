@@ -52,7 +52,7 @@ final class NativePadView:UIView {
         } else { engine.cancel();touchesByID=[:];link?.invalidate();link=nil }
     }
     private func configure() {
-        engine.surfaceWidth=Double(bounds.width)
+        engine.surfaceWidth=Double(bounds.width);engine.surfaceHeight=Double(bounds.height);engine.rightEdgeInset=Double(window?.safeAreaInsets.right ?? safeAreaInsets.right);engine.gestures=client.gestures;engine.continuousScaleEnabled=client.continuousSystemGestures
         engine.sensitivity=client.sensitivity;engine.pressDelay=client.pressDelay;engine.doubleTapInterval=client.doubleTapInterval
         engine.pressClickEnabled=client.pressClick;engine.naturalScroll=client.naturalScroll
         let available=traitCollection.forceTouchCapability == .available
@@ -134,6 +134,16 @@ final class PadController:UIViewController {
     private let settingsButton=UIButton(type:.system)
     private var controlTop:NSLayoutConstraint!
     private let quickKeys=UIStackView()
+    private let voiceStatus=UILabel()
+    private let revealButton=UIButton(type:.system)
+    private var revealingControls=false
+    private var controlsCollapsed=UserDefaults.standard.bool(forKey:"pad.controlsCollapsed") {didSet{UserDefaults.standard.set(controlsCollapsed,forKey:"pad.controlsCollapsed")}}
+    private var chromeDismiss:DispatchWorkItem?
+    private var keyRowWidth:NSLayoutConstraint!
+    private var rowWidth:NSLayoutConstraint!
+    private var toastDismiss:DispatchWorkItem?
+    private var lastVoiceNotice:String?
+
     private var keyButtons=[UIButton]()
     private var controlTrailing:NSLayoutConstraint!
     private var subscriptions=Set<AnyCancellable>()
@@ -159,10 +169,11 @@ final class PadController:UIViewController {
         view=UIView();view.backgroundColor=UIColor(white:0.094,alpha:1)
         pad=NativePadView(client:client);pad.translatesAutoresizingMaskIntoConstraints=false
         view.addSubview(pad)
+        // The entire screen remains the trackpad; controls float above it.
         NSLayoutConstraint.activate([pad.leadingAnchor.constraint(equalTo:view.leadingAnchor),pad.trailingAnchor.constraint(equalTo:view.trailingAnchor),pad.topAnchor.constraint(equalTo:view.topAnchor),pad.bottomAnchor.constraint(equalTo:view.bottomAnchor)])
-        controls.axis = .horizontal;controls.spacing=4
-        controls.backgroundColor=UIColor(white:0.16,alpha:0.9)
-        controls.layer.cornerRadius=24;controls.isLayoutMarginsRelativeArrangement=true
+        controls.axis = .horizontal;controls.spacing=8
+        controls.backgroundColor = .clear
+        controls.layer.cornerRadius=0;controls.isLayoutMarginsRelativeArrangement=true
         controls.directionalLayoutMargins=NSDirectionalEdgeInsets(top:2,leading:4,bottom:2,trailing:4)
         controls.translatesAutoresizingMaskIntoConstraints=false
         for button in [lockButton,rotateButton,settingsButton] {
@@ -191,25 +202,58 @@ final class PadController:UIViewController {
         controlTrailing=controls.trailingAnchor.constraint(equalTo:view.trailingAnchor,constant:-12)
         NSLayoutConstraint.activate([controlTop,controlTrailing])
         quickKeys.axis = .horizontal;quickKeys.spacing=8;quickKeys.distribution = .fillEqually
+        quickKeys.backgroundColor=UIColor(white:0.055,alpha:0.9);quickKeys.layer.cornerRadius=18
+        quickKeys.layer.borderWidth=0
+        quickKeys.isLayoutMarginsRelativeArrangement=true
+        quickKeys.directionalLayoutMargins=NSDirectionalEdgeInsets(top:4,leading:8,bottom:4,trailing:8)
         quickKeys.translatesAutoresizingMaskIntoConstraints=false
-        for key in PadQuickKey.allCases {
+        for (index,key) in client.quickKeys.enumerated() {
             let name=key.rawValue,title=key.title
             let button=UIButton(type:.system);button.setTitle(title,for:.normal)
-            button.accessibilityIdentifier="pad.key."+name
+            button.accessibilityIdentifier="pad.key."+name;button.tag=index
             button.accessibilityLabel=key.accessibilityTitle
-            button.titleLabel?.font = .monospacedSystemFont(ofSize:17,weight:.medium)
+            button.titleLabel?.font = UIFontMetrics(forTextStyle:.body).scaledFont(for:.monospacedSystemFont(ofSize:16,weight:.medium),maximumPointSize:21)
             button.titleLabel?.adjustsFontSizeToFitWidth=true;button.titleLabel?.minimumScaleFactor=0.75
-            button.backgroundColor=UIColor(white:0.16,alpha:0.95);button.tintColor=UIColor(white:0.9,alpha:1)
-            button.layer.cornerRadius=15
+            button.backgroundColor = .clear;button.tintColor=UIColor(white:0.9,alpha:1)
+            button.layer.cornerRadius=16
             button.addTarget(self,action:#selector(keyTapped(_:)),for:.touchUpInside)
+            button.addTarget(self,action:#selector(keyPressed(_:)),for:.touchDown)
+            button.addTarget(self,action:#selector(keyReleased(_:)),for:[.touchUpInside,.touchUpOutside,.touchCancel,.touchDragExit])
             keyButtons.append(button);quickKeys.addArrangedSubview(button)
         }
-        microphoneButton.tintColor=UIColor(white:0.08,alpha:1)
-        microphoneButton.backgroundColor=UIColor(red:0.79,green:0.96,blue:0.36,alpha:1)
-        microphoneButton.layer.cornerRadius=30;quickKeys.addArrangedSubview(microphoneButton)
+        microphoneButton.tintColor=UIColor(white:0.9,alpha:1)
+        microphoneButton.backgroundColor=UIColor(white:0.18,alpha:1)
+        microphoneButton.layer.cornerRadius=16;quickKeys.addArrangedSubview(microphoneButton)
         view.addSubview(quickKeys)
-        let desiredWidth=quickKeys.widthAnchor.constraint(equalTo:view.safeAreaLayoutGuide.widthAnchor,constant:-24);desiredWidth.priority = .defaultHigh
-        NSLayoutConstraint.activate([quickKeys.centerXAnchor.constraint(equalTo:view.safeAreaLayoutGuide.centerXAnchor),desiredWidth,quickKeys.widthAnchor.constraint(lessThanOrEqualToConstant:520),quickKeys.heightAnchor.constraint(equalToConstant:60),quickKeys.bottomAnchor.constraint(equalTo:view.safeAreaLayoutGuide.bottomAnchor,constant:-12)])
+        keyRowWidth=quickKeys.widthAnchor.constraint(equalTo:view.safeAreaLayoutGuide.widthAnchor,constant:-32);keyRowWidth.priority = .defaultHigh
+        rowWidth=quickKeys.widthAnchor.constraint(equalToConstant:60);rowWidth.isActive=false
+        NSLayoutConstraint.activate([quickKeys.centerXAnchor.constraint(equalTo:view.safeAreaLayoutGuide.centerXAnchor),keyRowWidth,quickKeys.widthAnchor.constraint(lessThanOrEqualToConstant:380),quickKeys.heightAnchor.constraint(equalToConstant:52),quickKeys.bottomAnchor.constraint(equalTo:view.safeAreaLayoutGuide.bottomAnchor,constant:-16)])
+        revealButton.translatesAutoresizingMaskIntoConstraints=false
+        revealButton.tintColor=UIColor(white:0.65,alpha:1)
+        revealButton.setImage(UIImage(systemName:"chevron.down",withConfiguration:UIImage.SymbolConfiguration(pointSize:12,weight:.semibold)),for:.normal)
+        revealButton.accessibilityIdentifier="pad.revealControls"
+        revealButton.addTarget(self,action:#selector(toggleControls),for:.touchUpInside)
+        view.addSubview(revealButton)
+        NSLayoutConstraint.activate([revealButton.leadingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.leadingAnchor,constant:8),revealButton.topAnchor.constraint(equalTo:controls.topAnchor),revealButton.widthAnchor.constraint(equalToConstant:44),revealButton.heightAnchor.constraint(equalToConstant:44)])
+        client.$showQuickKeys.combineLatest(client.$showTopControls,client.$showMicrophone).sink{[weak self] _ in DispatchQueue.main.async{self?.updateVisibility()}}.store(in:&subscriptions)
+        voiceStatus.translatesAutoresizingMaskIntoConstraints=false
+        voiceStatus.textColor=UIColor(white:0.8,alpha:1);voiceStatus.font = .preferredFont(forTextStyle:.caption1)
+        voiceStatus.adjustsFontForContentSizeCategory=true;voiceStatus.adjustsFontSizeToFitWidth=true;voiceStatus.minimumScaleFactor=0.85
+        voiceStatus.numberOfLines=3;voiceStatus.textAlignment = .center;voiceStatus.accessibilityTraits = .updatesFrequently
+        voiceStatus.backgroundColor=UIColor(white:0.14,alpha:0.96);voiceStatus.layer.cornerRadius=12;voiceStatus.clipsToBounds=true
+        view.addSubview(voiceStatus)
+        NSLayoutConstraint.activate([voiceStatus.centerXAnchor.constraint(equalTo:view.safeAreaLayoutGuide.centerXAnchor),voiceStatus.widthAnchor.constraint(lessThanOrEqualTo:view.safeAreaLayoutGuide.widthAnchor,constant:-40),voiceStatus.widthAnchor.constraint(lessThanOrEqualToConstant:340),voiceStatus.bottomAnchor.constraint(equalTo:quickKeys.topAnchor,constant:-12)])
+        client.$quickKeys.sink{[weak self] keys in
+            guard let self else{return}
+            for (index,button) in self.keyButtons.enumerated(){let key=keys[index];self.configureKey(button,key:key)}
+        }.store(in:&subscriptions)
+        client.speech.objectWillChange.sink{[weak self] in DispatchQueue.main.async{self?.updateVoice()}}.store(in:&subscriptions)
+        client.$ready.sink{[weak self] _ in DispatchQueue.main.async{self?.updateVoice()}}.store(in:&subscriptions)
+        client.$showConnection.removeDuplicates().sink{[weak self] presented in DispatchQueue.main.async{
+            guard let self else{return}
+            if presented{self.chromeDismiss?.cancel()}else{self.updateVisibility()}
+        }}.store(in:&subscriptions)
+        updateVoice()
         client.$protected.removeDuplicates().sink{[weak self] protected in
             guard let self else{return}
             self.pad?.cancelForRotation()
@@ -244,18 +288,98 @@ final class PadController:UIViewController {
     @objc private func accessibilityUnlock()->Bool {if client.protected{client.toggleProtection()};return true}
     @objc private func lockTapped(){if !client.protected{client.toggleProtection()}}
     @objc private func unlockHeld(_ recognizer:UILongPressGestureRecognizer){if recognizer.state == .began,client.protected{client.toggleProtection()}}
-    @objc private func rotateTapped(){pad?.cancelForRotation();client.toggleOrientation()}
+    @objc private func rotateTapped(){pad?.cancelForRotation();client.toggleOrientation();armControlsDismiss()}
+    private func configureKey(_ button:UIButton,key:PadQuickKey){
+        button.setTitle(key == .backspace ? nil:key.title,for:.normal)
+        button.setImage(key == .backspace ? UIImage(systemName:"delete.left",withConfiguration:UIImage.SymbolConfiguration(pointSize:18,weight:.regular)):nil,for:.normal)
+        button.accessibilityLabel=PTText(key.accessibilityTitle);button.accessibilityIdentifier="pad.key."+key.rawValue
+    }
+    @objc private func keyPressed(_ button:UIButton){
+        guard client.quickKeys.indices.contains(button.tag) else{return};let key=client.quickKeys[button.tag]
+        if key.repeatable{pad?.cancelForRotation();client.beginKey(key)}
+    }
+    @objc private func keyReleased(_ button:UIButton){
+        guard client.quickKeys.indices.contains(button.tag) else{return};client.endKey(client.quickKeys[button.tag]);armControlsDismiss()
+    }
     @objc private func keyTapped(_ button:UIButton){
         guard client.ready else{client.showConnection=true;return}
-        guard let name=button.accessibilityIdentifier?.split(separator:".").last else{return}
-        pad?.cancelForRotation();client.releaseInput();client.send([PadEvent(type:"shortcut",name:String(name))])
+        guard client.quickKeys.indices.contains(button.tag) else{return}
+        if !client.quickKeys[button.tag].repeatable{pad?.cancelForRotation();client.sendKey(client.quickKeys[button.tag])}
     }
-    @objc private func dictationTapped(){pad?.cancelForRotation();client.releaseInput();client.showDictation=true}
+    private func updateVoice(){
+        let speech=client.speech
+        if speech.busy || speech.error != nil {
+            showVoiceNotice(speech.status)
+        }else{voiceStatus.isHidden=true;lastVoiceNotice=nil;toastDismiss?.cancel()}
+        updateVisibility()
+        microphoneButton.setImage(UIImage(systemName:speech.recording ? "stop.fill":speech.preparing || speech.finishing || speech.sending ? "ellipsis":"mic"),for:.normal)
+        microphoneButton.backgroundColor=speech.recording ? UIColor(red:0.79,green:0.96,blue:0.36,alpha:1):UIColor(white:0.18,alpha:1)
+        microphoneButton.tintColor=speech.recording ? UIColor(white:0.08,alpha:1):UIColor(white:0.9,alpha:1)
+        microphoneButton.accessibilityLabel=PTText(speech.recording ? "Stop recording":speech.preparing ? "Cancel":"Start recording")
+        microphoneButton.isEnabled = !speech.finishing && !speech.sending || speech.recording
+        microphoneButton.alpha=microphoneButton.isEnabled ? 1:0.5
+    }
+    private func showVoiceNotice(_ message:String){
+        guard lastVoiceNotice != message else{return}
+        lastVoiceNotice=message;toastDismiss?.cancel()
+        voiceStatus.text="  "+message+"  ";voiceStatus.isHidden=false;voiceStatus.alpha=1
+        UIAccessibility.post(notification:.announcement,argument:message)
+        let dismiss=DispatchWorkItem{[weak self] in
+            guard let self else{return}
+            UIView.animate(withDuration:UIAccessibility.isReduceMotionEnabled ? 0:0.18,animations:{self.voiceStatus.alpha=0}){_ in self.voiceStatus.isHidden=true}
+        }
+        toastDismiss=dismiss
+        DispatchQueue.main.asyncAfter(deadline:.now()+(UIAccessibility.isVoiceOverRunning ? 8:4),execute:dismiss)
+    }
+    private func updateVisibility(){
+        guard isViewLoaded else{return}
+        let forceAll=revealingControls && !client.showQuickKeys && !client.showMicrophone && !client.showTopControls
+        let keys = !controlsCollapsed && (client.showQuickKeys || forceAll)
+        let mic = (!controlsCollapsed && (client.showMicrophone || forceAll)) || client.speech.busy
+        controls.isHidden = controlsCollapsed || (!client.showTopControls && !revealingControls)
+        controls.accessibilityElementsHidden=controls.isHidden
+        for button in keyButtons{button.isHidden = !keys}
+        microphoneButton.isHidden = !mic
+        quickKeys.isHidden = !keys && !mic
+        keyRowWidth.isActive=keys;rowWidth.isActive = !keys
+        revealButton.isHidden=false
+        let visible = !controls.isHidden || (!quickKeys.isHidden && !client.speech.busy)
+        revealButton.accessibilityLabel=PTText(visible ? "Hide controls":"Show controls")
+        revealButton.setImage(UIImage(systemName:visible ? "chevron.up":"chevron.down",withConfiguration:UIImage.SymbolConfiguration(pointSize:12,weight:.semibold)),for:.normal)
+    }
+    private func setControlsCollapsed(_ collapsed:Bool){
+        controlsCollapsed=collapsed
+        UIView.transition(with:view,duration:UIAccessibility.isReduceMotionEnabled ? 0:0.18,options:[.transitionCrossDissolve,.allowUserInteraction,.beginFromCurrentState]){self.updateVisibility()}
+    }
+    private func armControlsDismiss(){chromeDismiss?.cancel()}
+    @objc private func toggleControls(){
+        pad?.cancelForRotation();client.releaseInput()
+        let visible = !controls.isHidden || (!quickKeys.isHidden && !client.speech.busy)
+        revealingControls = !visible;setControlsCollapsed(visible)
+        if !visible{armControlsDismiss()}else{chromeDismiss?.cancel()}
+    }
+    @objc private func dictationTapped(){pad?.cancelForRotation();client.releaseInput();client.speech.toggle(client:client)}
     @objc private func settingsTapped(){pad?.cancelForRotation();client.releaseInput();client.showConnection=true}
 
     override func viewDidAppear(_ animated:Bool) {
-        super.viewDidAppear(animated);pad.becomeFirstResponder();client.landscape=view.window?.windowScene?.interfaceOrientation.isLandscape ?? false
+        super.viewDidAppear(animated);pad.becomeFirstResponder();armControlsDismiss()
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-test-hidden"){client.showQuickKeys=false;client.showTopControls=false;client.showMicrophone=false;updateVisibility()}
+        #endif
+        client.landscape=view.window?.windowScene?.interfaceOrientation.isLandscape ?? false
+        #if DEBUG
+        if !controlsTestStarted,ProcessInfo.processInfo.arguments.contains("--ui-test-manualcontrols") {
+            controlsTestStarted=true
+            DispatchQueue.main.asyncAfter(deadline:.now()+2){[weak self] in self?.verifyManualControls(restore:false)}
+        }
+        if !controlsTestStarted,ProcessInfo.processInfo.arguments.contains("--ui-test-restorecontrols") {
+            controlsTestStarted=true
+            DispatchQueue.main.asyncAfter(deadline:.now()+2){[weak self] in self?.verifyManualControls(restore:true)}
+        }
+        if !controlsTestStarted,ProcessInfo.processInfo.arguments.contains("--ui-test-visibility") {
+            controlsTestStarted=true
+            DispatchQueue.main.asyncAfter(deadline:.now()+1){[weak self] in self?.verifyVisibility()}
+        }
         if !controlsTestStarted,ProcessInfo.processInfo.arguments.contains("--ui-test-controls") {
             controlsTestStarted=true
             DispatchQueue.main.asyncAfter(deadline:.now()+3){[weak self] in self?.verifyControls()}
@@ -263,6 +387,46 @@ final class PadController:UIViewController {
         #endif
     }
     #if DEBUG
+    private func verifyManualControls(restore:Bool){
+        client.showQuickKeys=true;client.showTopControls=true;client.showMicrophone=true
+        updateVisibility();view.layoutIfNeeded()
+        if restore {
+            var report:[String:Any]=["restoredCollapsed":controlsCollapsed && controls.isHidden && quickKeys.isHidden]
+            toggleControls();view.layoutIfNeeded();report["canExpandAgain"] = !controls.isHidden && !quickKeys.isHidden
+            if let data=try? JSONSerialization.data(withJSONObject:report){try? data.write(to:FileManager.default.temporaryDirectory.appendingPathComponent("PocketTrackpad-ManualRestoreQA.json"))}
+            return
+        }
+        controlsCollapsed=false;revealingControls=false;updateVisibility();armControlsDismiss()
+        DispatchQueue.main.asyncAfter(deadline:.now()+7){[weak self] in
+            guard let self else{return}
+            var report:[String:Any]=["stillExpandedAfterSevenSeconds":!self.controls.isHidden && !self.quickKeys.isHidden]
+            self.toggleControls();self.view.layoutIfNeeded()
+            report["collapsedByButton"]=self.controls.isHidden && self.quickKeys.isHidden
+            report["savedCollapsed"]=UserDefaults.standard.bool(forKey:"pad.controlsCollapsed")
+            report["handleVisible"] = !self.revealButton.isHidden
+            if let data=try? JSONSerialization.data(withJSONObject:report){try? data.write(to:FileManager.default.temporaryDirectory.appendingPathComponent("PocketTrackpad-ManualControlsQA.json"))}
+        }
+    }
+    private func verifyVisibility(){
+        let saved=(client.showQuickKeys,client.showTopControls,client.showMicrophone)
+        client.showQuickKeys=false;client.showTopControls=false;client.showMicrophone=false
+        revealingControls=false;updateVisibility();view.layoutIfNeeded()
+        var report:[String:Any]=["allHidden":controls.isHidden && quickKeys.isHidden,"restoreHandleVisible":!revealButton.isHidden,"surfaceCoverage":surfaceCoverage()]
+        let point=revealButton.convert(CGPoint(x:22,y:22),to:view)
+        let hit=view.hitTest(point,with:nil)
+        report["restoreHandleTappable"]=hit === revealButton || hit?.isDescendant(of:revealButton)==true
+        toggleControls();view.layoutIfNeeded()
+        report["temporarilyRestored"] = !controls.isHidden && !quickKeys.isHidden && keyButtons.allSatisfy{!$0.isHidden}
+        toggleControls();report["hiddenAgain"]=controls.isHidden && quickKeys.isHidden
+        showVoiceNotice(PTText("Could not start the Mac microphone."))
+        report["toastAppeared"] = !voiceStatus.isHidden
+        DispatchQueue.main.asyncAfter(deadline:.now()+4.5){[weak self] in
+            guard let self else{return}
+            report["toastDismissed"]=self.voiceStatus.isHidden
+            self.client.showQuickKeys=saved.0;self.client.showTopControls=saved.1;self.client.showMicrophone=saved.2;self.updateVisibility()
+            if let data=try? JSONSerialization.data(withJSONObject:report,options:.sortedKeys){try? data.write(to:FileManager.default.temporaryDirectory.appendingPathComponent("PocketTrackpad-VisibilityQA.json"),options:.atomic)}
+        }
+    }
     private func controlHits()->[String:Any] {
         guard let window=view.window else{return ["error":"no window"]}
         var result=[String:Any]()
@@ -277,8 +441,13 @@ final class PadController:UIViewController {
         }
         return result
     }
+    private func surfaceCoverage()->Double {
+        guard view.bounds.width>0,view.bounds.height>0 else{return 0}
+        return pad.bounds.width*pad.bounds.height/(view.bounds.width*view.bounds.height)
+    }
     private func verifyControls(){
-        var report:[String:Any]=["portrait":controlHits()]
+        chromeDismiss?.cancel();controlsCollapsed=false;revealingControls=true;updateVisibility()
+        var report:[String:Any]=["portrait":controlHits(),"portraitSurfaceCoverage":surfaceCoverage()]
         lockButton.sendActions(for:.touchUpInside)
         report["lockEnabled"]=client.protected;report["lockLabel"]=lockButton.accessibilityLabel==PTText("Hold to unlock trackpad");report["locked"]=controlHits()
         let before=view.window?.windowScene?.interfaceOrientation.isLandscape ?? false
@@ -286,7 +455,7 @@ final class PadController:UIViewController {
         DispatchQueue.main.asyncAfter(deadline:.now()+1.5){[weak self] in
             guard let self else{return}
             report["rotationChanged"]=(self.view.window?.windowScene?.interfaceOrientation.isLandscape ?? false) != before
-            report["landscape"]=self.controlHits()
+            report["landscape"]=self.controlHits();report["landscapeSurfaceCoverage"]=self.surfaceCoverage()
             self.settingsButton.sendActions(for:.touchUpInside)
             report["settingsAction"]=self.client.showConnection
             DispatchQueue.main.asyncAfter(deadline:.now()+0.5){

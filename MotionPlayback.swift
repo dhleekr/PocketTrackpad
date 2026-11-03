@@ -97,7 +97,7 @@ final class MotionPlayback {
     static func isContinuous(_ event:[String:Any])->Bool {
         let type=event["type"] as? String ?? "",phase=event["phase"] as? String ?? "changed"
         let momentum=event["momentum"] as? String ?? "none"
-        return type=="move" || (["scroll","magnify","dockSwipe"].contains(type) && phase=="changed") || (type=="scroll" && phase=="ended" && momentum=="changed")
+        return type=="move" || (["scroll","magnify","rotate","dockSwipe"].contains(type) && phase=="changed") || (type=="scroll" && phase=="ended" && momentum=="changed")
     }
     // Returns false for a boundary after draining motion, so the caller can
     // apply the click/release/terminal phase immediately and in order.
@@ -105,6 +105,7 @@ final class MotionPlayback {
         if Self.isContinuous(event){enqueue(event,at:now,apply:apply);return true}
         let type=event["type"] as? String ?? "",phase=event["phase"] as? String ?? "changed"
         let momentum=event["momentum"] as? String ?? "none"
+        if type=="key" && phase=="changed"{return false}
         if type != "status" || event["name"] as? String=="motionEnd" {flush(apply:apply)}
         if type=="scroll" && (phase=="began" || momentum=="began") {
             enqueue(event,at:now,apply:apply)

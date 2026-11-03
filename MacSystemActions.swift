@@ -1,6 +1,8 @@
 import Cocoa
 import ApplicationServices
 
+@_silgen_name("PocketPostNotification") private func PocketPostNotification(_ progress:Double,_ delta:Double,_ velocity:Double,_ phase:Int32)->Bool
+
 /// System UI stays with macOS; no fixed screen coordinate or user hotkey is assumed.
 enum MacSystemActions {
     static func perform(_ name:String) {
@@ -10,9 +12,23 @@ enum MacSystemActions {
                 guard let path=candidates.first(where:{FileManager.default.fileExists(atPath:$0)}) else{NSSound.beep();return}
                 NSWorkspace.shared.open(URL(fileURLWithPath:path))
             } else if name=="notifications" {
-                guard pressClock() else{NSSound.beep();return}
+                if #available(macOS 27.0,*){animateNotification()}else{guard pressClock() else{NSSound.beep();return}}
             }
         }
+    }
+    #if POCKET_LOCAL_TEST
+    static func testCloseNotification(){animateNotification(closing:true)}
+    #endif
+    private static func animateNotification(closing:Bool=false){
+        let direction=closing ? -1.0:1.0
+        guard PocketPostNotification(direction*0.02,direction*0.02,0,1) else{NSSound.beep();return}
+        var step=0,previous=direction*0.02
+        let timer=Timer(timeInterval:1.0/60,repeats:true){timer in
+            step+=1;let progress=direction*min(1,Double(step)/16)
+            _ = PocketPostNotification(progress,progress-previous,0,2);previous=progress
+            if step>=16{_ = PocketPostNotification(progress,0,direction*5,4);timer.invalidate()}
+        }
+        RunLoop.main.add(timer,forMode:.common)
     }
     private static func children(_ element:AXUIElement,_ attribute:String)->[AXUIElement] {
         var value:CFTypeRef?
@@ -33,7 +49,7 @@ enum MacSystemActions {
                     var value:CFTypeRef?
                     _ = AXUIElementCopyAttributeValue(node,kAXIdentifierAttribute as CFString,&value)
                     if let id=value as? String,["com.apple.menuextra.clock","com.apple.controlcenter.Clock","Clock"].contains(id) {
-                        return AXUIElementPerformAction(node,kAXPressAction as CFString) == .success
+                        if AXUIElementPerformAction(node,kAXPressAction as CFString) == .success{return true}
                     }
                     next+=children(node,kAXChildrenAttribute)
                 }

@@ -199,5 +199,168 @@ test("spreading back cancels four finger apps pinch") {
 test("cancelled apps pinch never opens apps") {
  let(e,events)=fixture();e.update(fourPinch(),at:0);e.update(fourPinch(55),at:0.1);e.cancel();e.update([:],at:0.3);return events().isEmpty
 }
+test("natural side-by-side fingers at the right edge open Notification Center") {
+ let(e,events)=fixture();e.surfaceWidth=390;var haptics=0;e.haptic={_ in haptics+=1}
+ let start=[1:PadPoint(x:325,y:180),2:PadPoint(x:375,y:195)]
+ e.update(start,at:0);e.update([1:PadPoint(x:260,y:180),2:PadPoint(x:310,y:195)],at:0.15);e.update([:],at:0.2)
+ return events()==[PadEvent(type:"shortcut",name:"notifications")] && haptics==1
+}
+test("landscape edge swipe allows normal horizontal finger separation") {
+ let(e,events)=fixture();e.surfaceWidth=932
+ e.update([1:PadPoint(x:850,y:180),2:PadPoint(x:915,y:200)],at:0)
+ e.update([1:PadPoint(x:775,y:180),2:PadPoint(x:840,y:200)],at:0.2);e.update([:],at:0.3)
+ return events()==[PadEvent(type:"shortcut",name:"notifications")]
+}
+test("notifications can be disabled without blocking horizontal scroll") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.gestures.set(.notifications,false)
+ e.update(edgePair(),at:0);e.update(edgePair(310),at:0.1);e.update([:],at:0.2)
+ return !events().contains{$0.name=="notifications"} && events().contains{$0.type=="scroll"}
+}
+test("tap click can be disabled while pointer movement remains available") {
+ let(e,events)=fixture();e.gestures.set(.tapToClick,false);e.pressClickEnabled=false
+ e.update([1:PadPoint(x:50,y:50)],at:0);e.update([:],at:0.1)
+ e.update([1:PadPoint(x:50,y:50)],at:1);e.update([1:PadPoint(x:70,y:50)],at:1.1);e.update([:],at:1.2)
+ return !events().contains{$0.type=="click"} && events().contains{$0.type=="move"}
+}
+test("corner secondary click does not also emit a primary click") {
+ let(e,events)=fixture();e.surfaceWidth=390;e.surfaceHeight=800;e.gestures.secondaryClick = .bottomRight
+ e.update([1:PadPoint(x:375,y:780)],at:0);e.update([:],at:0.1)
+ return events()==[PadEvent(type:"right")]
+}
+test("three finger lookup is independently switchable") {
+ let(e,events)=fixture();e.update([1:PadPoint(x:50,y:50),2:PadPoint(x:80,y:50),3:PadPoint(x:110,y:50)],at:0);e.update([:],at:0.1)
+ return events()==[PadEvent(type:"shortcut",name:"lookup")]
+}
+test("smart zoom consumes two double taps without secondary clicks") {
+ let(e,events)=fixture();e.gestures.set(.smartZoom,true)
+ e.update(edgePair(150),at:0);e.update([:],at:0.05);e.update(edgePair(150),at:0.15);e.update([:],at:0.2);e.tick(at:0.8)
+ return events()==[PadEvent(type:"smartZoom")]
+}
+test("a lone two-finger tap still right clicks after the smart-zoom interval") {
+ let(e,events)=fixture();e.gestures.set(.smartZoom,true)
+ e.update(edgePair(150),at:0);e.update([:],at:0.05);e.tick(at:0.8)
+ return events()==[PadEvent(type:"right")]
+}
+test("disabled pinch does not accidentally right click") {
+ let(e,events)=fixture();e.gestures.set(.pinchZoom,false)
+ e.update([1:PadPoint(x:100,y:100),2:PadPoint(x:200,y:100)],at:0)
+ e.update([1:PadPoint(x:70,y:100),2:PadPoint(x:230,y:100)],at:0.1);e.update([:],at:0.2)
+ return events().isEmpty
+}
+test("two finger rotation emits begin, rotation and end") {
+ let(e,events)=fixture();e.update([1:PadPoint(x:100,y:100),2:PadPoint(x:200,y:100)],at:0)
+ e.update([1:PadPoint(x:105,y:80),2:PadPoint(x:195,y:120)],at:0.1);e.update([:],at:0.2)
+ return events().first?.type=="rotate" && events().first?.phase=="began" && events().contains{$0.type=="rotate" && $0.phase=="changed" && abs($0.x ?? 0)>10} && events().last?.phase=="ended"
+}
+test("four finger spread shows Desktop and reversing cancels it") {
+ let(e,events)=fixture();e.update(fourPinch(40),at:0);e.update(fourPinch(75),at:0.1);e.update([:],at:0.2)
+ return events()==[PadEvent(type:"shortcut",name:"showDesktop")]
+}
+test("page-history off preserves horizontal content scrolling without a pan companion") {
+ let(e,events)=fixture();e.gestures.set(.pageSwipe,false);e.update(edgePair(150),at:0);e.update(edgePair(100),at:0.1);e.update([:],at:0.2)
+ return events().contains{$0.type=="scroll"} && events().filter{$0.type=="scroll"}.allSatisfy{$0.name=="contentOnly"}
+}
+test("disabled Spaces swipes emit no system action") {
+ let(e,events)=fixture();e.gestures.spacesFingers=0
+ let start=[1:PadPoint(x:100,y:100),2:PadPoint(x:130,y:100),3:PadPoint(x:160,y:100)]
+ e.update(start,at:0);e.update(start.mapValues{PadPoint(x:$0.x-80,y:$0.y)},at:0.1);e.update([:],at:0.2)
+ return events().isEmpty
+}
+test("edge swipe escapes a first-finger dwell click") {
+ let(e,events)=fixture();e.surfaceWidth=390
+ e.update([1:PadPoint(x:375,y:160)],at:0);e.tick(at:0.18)
+ e.update([1:PadPoint(x:375,y:160),2:PadPoint(x:325,y:190)],at:0.2)
+ e.update([1:PadPoint(x:300,y:160),2:PadPoint(x:250,y:190)],at:0.3);e.update([:],at:0.4)
+ return !e.held && events().contains{$0.name=="notifications"}
+}
+test("edge swipe accepts a natural wider second finger placement") {
+ let(e,events)=fixture();e.surfaceWidth=440
+ e.update([1:PadPoint(x:420,y:160),2:PadPoint(x:280,y:190)],at:0)
+ e.update([1:PadPoint(x:350,y:160),2:PadPoint(x:210,y:190)],at:0.15);e.update([:],at:0.3)
+ return events().contains{$0.name=="notifications"}
+}
+test("a fourth finger arriving during initial motion can still show desktop") {
+ let(e,events)=fixture();let three=Dictionary(uniqueKeysWithValues:fourPinch(50).filter{$0.key != 4})
+ e.update(three,at:0);e.update(three.mapValues{PadPoint(x:$0.x,y:$0.y+15)},at:0.03)
+ e.update(fourPinch(50),at:0.05);e.update(fourPinch(90),at:0.17);e.update([:],at:0.25)
+ return events().contains{$0.name=="showDesktop"} && !events().contains{$0.name=="apps"}
+}
+test("compact four-finger pinch opens Apps without a large movement") {
+ let(e,events)=fixture();e.update(fourPinch(40),at:0);e.update(fourPinch(33),at:0.15);e.update([:],at:0.25)
+ return events().contains{$0.name=="apps"}
+}
+test("compact four-finger spread shows desktop") {
+ let(e,events)=fixture();e.update(fourPinch(40),at:0);e.update(fourPinch(47),at:0.15);e.update([:],at:0.25)
+ return events().contains{$0.name=="showDesktop"}
+}
+test("small four-finger contact jitter never triggers a system action") {
+ let(e,events)=fixture();e.update(fourPinch(40),at:0);e.update(fourPinch(42),at:0.15);e.update([:],at:0.25)
+ return !events().contains{$0.type=="shortcut"}
+}
+test("completed Mission Control up swipe is followed by a fresh downward stream") {
+ let(e,events)=fixture()
+ e.update(fingers(3),at:0);e.update(fingers(3,dy: -120),at:0.2);e.update([:],at:0.3)
+ let boundary=events().count
+ e.update(fingers(3),at:0.6);e.update(fingers(3,dy:120),at:0.8);e.update([:],at:0.9)
+ let down=Array(events().dropFirst(boundary))
+ return down.first?.phase=="began" && down.last?.phase=="ended" && down.contains{$0.type=="dockSwipe" && ($0.x ?? 0)<0}
+}
+test("native desktop spread streams progress and finishes without a shortcut") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true
+ e.update(fourPinch(40),at:0);e.update(fourPinch(44),at:0.1);e.update(fourPinch(50),at:0.2)
+ let before=events();e.update([:],at:0.3)
+ return before.contains{$0.name=="scale" && $0.phase=="changed"} && events().last?.phase=="ended" && !events().contains{$0.type=="shortcut"}
+}
+test("reversing a native desktop spread cancels the interaction") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true
+ e.update(fourPinch(40),at:0);e.update(fourPinch(50),at:0.1);e.update(fourPinch(40),at:0.2);e.update([:],at:0.3)
+ return events().last?.name=="scale" && events().last?.phase=="cancelled"
+}
+test("native notification edge drag streams the panel before fingers lift") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true;e.surfaceWidth=390
+ e.update(edgePair(),at:0);e.update(edgePair(350),at:0.1);e.update(edgePair(310),at:0.2)
+ let before=events();e.update([:],at:0.3)
+ return before.contains{$0.name=="notification" && $0.phase=="changed"} && events().last?.phase=="ended" && !events().contains{$0.type=="shortcut"}
+}
+test("native notification edge reversal closes the partial panel") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true;e.surfaceWidth=390
+ e.update(edgePair(),at:0);e.update(edgePair(310),at:0.1);e.update(edgePair(),at:0.2);e.update([:],at:0.3)
+ return events().last?.name=="notification" && events().last?.phase=="cancelled"
+}
+test("staggered scale lifts preserve the final progress") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true
+ e.update(fourPinch(40),at:0);e.update(fourPinch(50),at:0.1)
+ let p=events().last?.x
+ e.update([1:PadPoint(x:150,y:250)],at:0.15);e.update([:],at:0.2)
+ return events().last?.name=="scale" && events().last?.x==p && events().last?.phase=="ended"
+}
+test("a short inward edge swipe opens Notification Center") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true;e.surfaceWidth=390
+ e.update(edgePair(340),at:0);e.update(edgePair(314),at:0.12);e.update([:],at:0.2)
+ return events().last?.name=="notification" && events().last?.phase=="ended"
+}
+test("a fresh outward swipe closes an opened Notification Center") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true;e.surfaceWidth=390
+ e.update(edgePair(),at:0);e.update(edgePair(330),at:0.15);e.update([:],at:0.2)
+ let boundary=events().count
+ e.update(edgePair(180),at:0.4);e.update(edgePair(215),at:0.55);e.update([:],at:0.6)
+ let close=Array(events().dropFirst(boundary))
+ return close.contains{$0.name=="notification" && ($0.x ?? 0)<0} && close.last?.phase=="ended" && !close.contains{$0.type=="scroll"}
+}
+test("cancelled closing keeps the panel available for a later close") {
+ let(e,events)=fixture();e.continuousScaleEnabled=true;e.surfaceWidth=390
+ e.update(edgePair(),at:0);e.update(edgePair(330),at:0.1);e.update([:],at:0.15)
+ e.update(edgePair(180),at:0.3);e.update(edgePair(200),at:0.4);e.update(edgePair(180),at:0.5);e.update([:],at:0.6)
+ let boundary=events().count
+ e.update(edgePair(180),at:0.8);e.update(edgePair(220),at:0.9);e.update([:],at:1)
+ return events().dropFirst(boundary).contains{$0.name=="notification" && ($0.x ?? 0)<0}
+}
+test("closing Mission Control uses its own finger setting when App Expose is off") {
+ let(e,events)=fixture();e.gestures.exposeFingers=0;e.gestures.missionFingers=3
+ e.update(fingers(3),at:0);e.update(fingers(3,dy: -160),at:0.2);e.update([:],at:0.3)
+ let boundary=events().count
+ e.update(fingers(3),at:0.6);e.update(fingers(3,dy:120),at:0.8);e.update([:],at:0.9)
+ return events().dropFirst(boundary).contains{$0.name=="vertical" && ($0.x ?? 0)<0}
+}
 print("Native gesture checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

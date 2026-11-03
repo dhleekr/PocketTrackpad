@@ -23,7 +23,7 @@ The pointer uses Quartz desktop coordinates across active displays, including ne
 
 The receiver advertises protocol 2 in authenticated responses. New controller features are gated on that capability, preserving the connection to older receivers. Text is a bounded, authenticated event with a receipt identifier. The phone clears its draft only after a Mac acknowledgment and does not retry automatically after an uncertain disconnect. The Mac sends Unicode in bounded chunks without splitting surrogate pairs or touching the clipboard. Some Mac applications can interpret synthetic text differently; physical-app verification remains necessary.
 
-Speech recognition uses the iPhone microphone only after an explicit user action and system authorization. On-device support is required; audio is held in memory, not written to a file or sent over the connection. Recording stops on interruption, backgrounding, disconnection, or dismissal. Partial recognition remains on the phone; text transfer is explicit and does not press Return. Diagnostic recordings contain event timing, not transcript contents.
+Microphone capture begins only after an explicit phone action and system authorization. Raw PCM travels through a separate authenticated Wi-Fi socket to the paired Mac virtual input, using bounded memory without audio files or transcripts. The receiving GPT app performs recognition under its own privacy settings. The Mac registers or reuses a local hold-to-dictate shortcut; CoreAudio input metadata confirms recording begins. Stop, disconnect, and receiver shutdown release the key and silence the route. The previous physical microphone is restored only after stop is confirmed. See [microphone integration](gpt-microphone-integration.md).
 
 ## Transport and pairing
 

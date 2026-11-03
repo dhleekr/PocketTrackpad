@@ -27,10 +27,22 @@ import UIKit
         // The next physical orientation change uses the full supported mask.
         DispatchQueue.main.asyncAfter(deadline:.now()+0.8){PadOrientationDelegate.mask = .allButUpsideDown}
     }
+    @Published var showQuickKeys=UserDefaults.standard.object(forKey:"pad.showQuickKeys") as? Bool ?? true {didSet{UserDefaults.standard.set(showQuickKeys,forKey:"pad.showQuickKeys")}}
+    @Published var showTopControls=UserDefaults.standard.object(forKey:"pad.showTopControls") as? Bool ?? true {didSet{UserDefaults.standard.set(showTopControls,forKey:"pad.showTopControls")}}
+    @Published var showMicrophone=UserDefaults.standard.object(forKey:"pad.showMicrophone") as? Bool ?? true {didSet{UserDefaults.standard.set(showMicrophone,forKey:"pad.showMicrophone")}}
     @Published var ready=false
     @Published var message=PTText("Mac QR로 연결하세요.")
     @Published var latencyMS=0
-    @Published var showDictation=false
+    let speech=RemoteMicrophone()
+    @Published var gestures=PadGesturePreferences.load(){didSet{gestures.save()}}
+    @Published var quickKeys=PadQuickKey.restored(UserDefaults.standard.stringArray(forKey:"pad.quickKeys")) {
+        didSet{UserDefaults.standard.set(quickKeys.map(\.rawValue),forKey:"pad.quickKeys")}
+    }
+    func sendKey(_ key:PadQuickKey){
+        guard ready else{showConnection=true;return}
+        if key.requiresV3 && !(transport == .wifi ? wifi.customKeys:reverse.customKeys){message=PTText("Update the Mac app to use these features.");showConnection=true;return}
+        releaseInput();send([PadEvent(type:"shortcut",name:key.rawValue)])
+    }
     @Published var showConnection=true
     @Published var pressureAvailable=false
     @Published var sensitivity=1.6 {didSet{UserDefaults.standard.set(sensitivity,forKey:"pad.sensitivity")}}
@@ -63,27 +75,48 @@ import UIKit
         reverse.$message.throttle(for:.milliseconds(200),scheduler:RunLoop.main,latest:true).sink{[weak self] v in guard let self,self.transport == .bluetooth else{return};self.message=v}.store(in:&subscriptions)
         reverse.$latencyMS.throttle(for:.milliseconds(200),scheduler:RunLoop.main,latest:true).sink{[weak self] v in if self?.transport == .bluetooth {self?.latencyMS=v}}.store(in:&subscriptions)
     }
-    private func updateReady(_ value:Bool){ready=value;if !value {if let id=textID{finishText(id:id,ok:false)};showConnection=true}}
+    private func updateReady(_ value:Bool){ready=value;if !value {endKey();speech.cancel();if let id=textID{finishText(id:id,ok:false)};showConnection=true}}
     func start(){resumeConnection()}
     func resumeConnection(){
         if transport == .wifi {wifi.start();updateReady(wifi.ready)}
         else {reverse.start(token:pairingToken);updateReady(reverse.ready)}
     }
-    func releaseInput(){send([PadEvent(type:"up")])}
+    private var heldKey:PadQuickKey?
+    private var keyHeartbeat:Timer?
+    func beginKey(_ key:PadQuickKey){
+        guard ready,key.repeatable else{return}
+        guard transport == .wifi ? wifi.gestureOptions:reverse.gestureOptions else{message=PTText("Update the Mac app to use these features.");showConnection=true;return}
+        releaseInput();heldKey=key;send([PadEvent(type:"key",phase:"began",name:key.rawValue)])
+        let timer=Timer(timeInterval:0.15,repeats:true){[weak self] _ in Task{@MainActor in
+            guard let self,let key=self.heldKey else{return};self.send([PadEvent(type:"key",phase:"changed",name:key.rawValue)])
+        }}
+        keyHeartbeat=timer;RunLoop.main.add(timer,forMode:.common)
+    }
+    func endKey(_ key:PadQuickKey?=nil){
+        guard let heldKey,key==nil || heldKey==key else{return}
+        keyHeartbeat?.invalidate();keyHeartbeat=nil;self.heldKey=nil
+        send([PadEvent(type:"key",phase:"ended",name:heldKey.rawValue)])
+    }
+    func releaseInput(){endKey();send([PadEvent(type:"up")])}
+    var continuousSystemGestures:Bool {transport == .wifi ? wifi.continuousSystemGestures:reverse.continuousSystemGestures}
+    var supportsRemoteMicrophone:Bool {transport == .wifi ? wifi.remoteMicrophone:reverse.remoteMicrophone}
+    var microphoneEndpoint:PairingEndpoint? {guard let address=wifi.pairingAddress else{return nil};return try? PairingEndpoint(address)}
     private var pairingToken:String? {guard let address=wifi.pairingAddress else{return nil};return (try? PairingEndpoint(address))?.token}
     func selectTransport(){
+        speech.cancel()
         if let id=textID{finishText(id:id,ok:false)}
         if transport == .wifi {reverse.pause();ready=false;message=PTText("Wi-Fi 연결 중…");wifi.reconnect()}
         else {wifi.pause();ready=false;reverse.start(token:pairingToken);message=reverse.message}
         showConnection=true
     }
     func pair(_ address:String){
+        speech.cancel()
         guard (try? PairingEndpoint(address)) != nil else {message=PTText("Mac 앱의 전체 QR 또는 연결 주소를 사용하세요.");return}
         wifi.pair(address,connectNow:transport == .wifi)
         if transport == .bluetooth {reverse.reconnect(token:pairingToken)}
     }
-    func forgetMac(){reverse.pause();wifi.forgetPairing();ready=false;showConnection=true;message=PTText("Mac QR로 연결하세요.")}
-    func reconnect(){if transport == .wifi {wifi.reconnect()}else {reverse.reconnect(token:pairingToken)}}
+    func forgetMac(){speech.cancel();reverse.pause();wifi.forgetPairing();ready=false;showConnection=true;message=PTText("Mac QR로 연결하세요.")}
+    func reconnect(){speech.cancel();if transport == .wifi {wifi.reconnect()}else {reverse.reconnect(token:pairingToken)}}
     var extendedInput:Bool {transport == .wifi ? wifi.extendedInput:reverse.extendedInput}
     private var textID:String?
     private var textCompletion:((Bool)->Void)?
@@ -101,9 +134,12 @@ import UIKit
         guard textID==id else{return};let completion=textCompletion;textID=nil;textCompletion=nil;completion?(ok)
     }
     func send(_ events:[PadEvent]){
+        if events.contains(where:{["rotate","smartZoom","key"].contains($0.type) || $0.name=="contentOnly" || ["lookup","showDesktop"].contains($0.name ?? "")}) && !(transport == .wifi ? wifi.gestureOptions:reverse.gestureOptions){
+            message=PTText("Update the Mac app to use these features.");showConnection=true;return
+        }
         if events.contains(where:{$0.type=="text" || ($0.type=="shortcut" && (["notifications","apps"].contains($0.name ?? "") || PadQuickKey(rawValue:$0.name ?? "") != nil))}) && !extendedInput {
             message=PTText("Update the Mac app to use these features.");showConnection=true;return
         }
         if transport == .wifi {wifi.send(events)}else {reverse.send(events)}}
-    func pause(){if let id=textID{finishText(id:id,ok:false)};if transport == .wifi {wifi.pause()}else {reverse.pause()};ready=false}
+    func pause(){endKey();speech.cancel();if let id=textID{finishText(id:id,ok:false)};if transport == .wifi {wifi.pause()}else {reverse.pause()};ready=false}
 }

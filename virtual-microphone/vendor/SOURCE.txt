@@ -1,0 +1,3 @@
+Apple Creating an Audio Server Driver Plug-in sample, downloaded 2026-11-03.
+https://docs-assets.developer.apple.com/published/430ad6501f6f/CreatingAnAudioServerDriverPlugIn.zip
+Modified device identity and input/output callback to use bounded, atomic RAM loopback. Original Apple license retained.

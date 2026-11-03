@@ -1,0 +1,154 @@
+import Foundation
+import Network
+
+/// A separate authenticated TLS socket keeps audio out of the cursor/gesture queue.
+@MainActor final class MacMicrophoneHost {
+    private final class Session {
+        let connection:NWConnection
+        var decoder=PadFrameDecoder(),last=ProcessInfo.processInfo.systemUptime
+        var token:String?,started=false
+        init(_ connection:NWConnection){self.connection=connection}
+    }
+    private let listener:NWListener
+    private let queue=DispatchQueue(label:"PocketTrackpad.microphone.network",qos:.userInitiated)
+    private var sessions=[UUID:Session](),owner:UUID?
+    private var timer:Timer?
+    private var route:(any MicrophoneAudioRouting)?
+    private var controls:(any MicrophoneAppControlling)?
+    private var finishingTask:Task<Bool,Never>?
+    private var pendingRestoration:(route:any MicrophoneAudioRouting,controls:any MicrophoneAppControlling)?
+    private let report:(String)->Void
+    private let makeControls:@MainActor ()->any MicrophoneAppControlling
+    private let makeRoute:()->any MicrophoneAudioRouting
+    private let deviceAvailable:()->Bool
+    init(token:String,port:UInt16=8767,
+         makeControls:@escaping @MainActor ()->any MicrophoneAppControlling={@MainActor in GPTMicrophoneControl()},
+         makeRoute:@escaping ()->any MicrophoneAudioRouting={MacVirtualMicrophone()},
+         deviceAvailable:@escaping ()->Bool={MacVirtualMicrophone.deviceID() != 0},
+         report:@escaping (String)->Void)throws {
+        self.report=report;self.makeControls=makeControls;self.makeRoute=makeRoute;self.deviceAvailable=deviceAvailable
+        listener=try NWListener(using:PadSecureLink.parameters(token:token),on:NWEndpoint.Port(rawValue:port)!)
+        listener.newConnectionHandler={[weak self] connection in Task{@MainActor in self?.accept(connection)}}
+        listener.start(queue:queue)
+        let timer=Timer(timeInterval:0.25,repeats:true){[weak self] _ in Task{@MainActor in
+            guard let self else{return}
+            if let pending=self.pendingRestoration,pending.controls.hasFinished(){pending.route.restoreInput();self.pendingRestoration=nil;self.report("Microphone stopped")}
+            for (id,session) in self.sessions {
+                if session.started,self.controls?.hasFinished()==true {
+                    session.started=false;self.send(["status":"ended","session":session.token ?? ""],to:id);await self.close(id,delay:true)
+                }else if ProcessInfo.processInfo.systemUptime-session.last>(session.started ? 2:30){await self.close(id)}
+            }
+        }}
+        self.timer=timer;RunLoop.main.add(timer,forMode:.common)
+    }
+    private func accept(_ connection:NWConnection){
+        guard sessions.count<2 else{connection.cancel();return}
+        let id=UUID();sessions[id]=Session(connection)
+        connection.stateUpdateHandler={[weak self] state in Task{@MainActor in
+            guard let self else{return}
+            switch state {
+            case .ready:
+                self.report("Microphone link authenticated")
+                guard self.owner==nil else{connection.cancel();self.sessions.removeValue(forKey:id);return}
+                self.owner=id;self.receive(id)
+            case .failed,.cancelled:await self.close(id)
+            default:break
+            }
+        }}
+        connection.start(queue:queue)
+    }
+    private func receive(_ id:UUID){
+        guard let session=sessions[id],owner==id else{return}
+        session.connection.receive(minimumIncompleteLength:1,maximumLength:8192){[weak self] data,_,complete,error in Task{@MainActor in
+            guard let self,let session=self.sessions[id] else{return}
+            guard error==nil,let data,!data.isEmpty else{await self.close(id);return}
+            do {
+                session.last=ProcessInfo.processInfo.systemUptime
+                for packet in try session.decoder.append(data){
+                    if packet.first==1 {
+                        guard session.started,packet.count>5,packet.count<=16005 else{throw PadSecureLink.Failure.invalidFrame}
+                        let sequence=packet.dropFirst().prefix(4).reduce(UInt32(0)){($0<<8)|UInt32($1)}
+                        try self.route?.append(Data(packet.dropFirst(5)))
+                        self.send(["ack":String(sequence)],to:id)
+                    }else{
+                        guard packet.count<4096,let command=try JSONSerialization.jsonObject(with:packet) as? [String:String],let op=command["op"],let token=command["session"],UUID(uuidString:token) != nil else{throw PadSecureLink.Failure.invalidFrame}
+                        if op=="start",session.token==nil {
+                            session.token=token
+                            self.report("Microphone start received")
+                            do {
+                                if let pending=self.pendingRestoration {
+                                    guard pending.controls.hasFinished() else{throw GPTMicrophoneControl.Failure.notConfirmed}
+                                    pending.route.restoreInput();self.pendingRestoration=nil
+                                }
+                                guard self.deviceAvailable() else{throw MacVirtualMicrophone.Failure.missingDevice}
+                                self.report("Finding GPT microphone button")
+                                let controls=self.makeControls();try controls.prepare();self.controls=controls
+                                self.report("Starting virtual microphone")
+                                let route=self.makeRoute();try route.start();self.route=route
+                                self.report("Opening GPT microphone")
+                                try await controls.start()
+                                guard self.sessions[id] === session else{return}
+                                session.started=true;self.send(["status":"ready","session":token],to:id);self.report("iPhone microphone active")
+                            }catch{
+                                let status:String
+                                if let failure=error as? GPTMicrophoneControl.Failure {
+                                    switch failure {
+                                    case .permission: status="controlPermission"
+                                    case .openGPT: status="openGPT"
+                                    case .buttonUnavailable,.ambiguous: status="dictateUnavailable"
+                                    case .notConfirmed: status="dictateUnconfirmed"
+                                    case .restartRequired: status="restartGPT"
+                                    case .shortcutConfiguration: status="shortcutConfiguration"
+                                    case .alreadyRecording: status="alreadyRecording"
+                                    }
+                                }else{status=(error as? MacVirtualMicrophone.Failure).map{if case .missingDevice=$0{return "install"};return "audio"} ?? "gpt"}
+                                self.send(["status":status,"session":token],to:id)
+                                await self.close(id,delay:true)
+                                self.report("Microphone start failed: \(String(describing:error))")
+                                return
+                            }
+                        }else if op=="stop",session.token==token {
+                            session.started=false
+                            let confirmed=await self.finishRecording(drain:true)
+                            self.send(["status":confirmed ? "stopped":"checkGPT","session":token],to:id)
+                            await self.close(id,delay:true);return
+                        }else{throw PadSecureLink.Failure.invalidFrame}
+                    }
+                }
+                if complete{await self.close(id)}else{self.receive(id)}
+            }catch{await self.close(id)}
+        }}
+    }
+    private func send(_ object:[String:String],to id:UUID){
+        guard let session=sessions[id],let data=try? JSONSerialization.data(withJSONObject:object),let frame=try? PadSecureLink.frame(data) else{return}
+        session.connection.send(content:frame,completion:.contentProcessed{_ in})
+    }
+    private func finishRecording(drain:Bool=false) async->Bool {
+        if let finishingTask{return await finishingTask.value}
+        let route=self.route,controls=self.controls;self.route=nil;self.controls=nil
+        let task=Task{@MainActor in
+            if drain{await route?.drain()}
+            route?.stop(restore:false)
+            let confirmed=await controls?.stop() ?? true
+            if confirmed{route?.restoreInput()}
+            else if let route,let controls{pendingRestoration=(route,controls)}
+            report(confirmed ? "Microphone stopped":"Stop recording in GPT; virtual microphone is silent")
+            return confirmed
+        }
+        finishingTask=task;let result=await task.value;finishingTask=nil;return result
+    }
+    private func close(_ id:UUID,delay:Bool=false) async {
+        guard let session=sessions.removeValue(forKey:id) else{return}
+        if owner==id{_ = await finishRecording();owner=nil}
+        if delay{try? await Task.sleep(for:.milliseconds(100))}
+        session.connection.cancel()
+    }
+    func shutdown() async {
+        timer?.invalidate();listener.cancel()
+        for id in Array(sessions.keys){
+            if let session=sessions[id]{session.started=false;send(["status":"ended","session":session.token ?? ""],to:id)}
+            await close(id)
+        }
+    }
+    deinit{timer?.invalidate();listener.cancel();for session in sessions.values{session.connection.cancel()}}
+}

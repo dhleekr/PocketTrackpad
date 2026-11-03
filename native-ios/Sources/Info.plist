@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>1.4.3</string>
 	<key>CFBundleVersion</key>
-	<string>38</string>
+	<string>44</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -57,8 +57,6 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Use the microphone only when you start dictation. Audio is recognized on this iPhone.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Turn your speech into text on this iPhone, then send the text to your paired Mac when you choose.</string>
+	<string>Stream your iPhone microphone to your paired Mac when you press the microphone button. GPT handles recognition.</string>
 </dict>
 </plist>

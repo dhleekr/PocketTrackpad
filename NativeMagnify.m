@@ -28,3 +28,28 @@ CGEventRef PocketCreatePanCompanion(double x,double y,int32_t phase) {
     CGEventSetDoubleValueField(result,119,y);
     return result;
 }
+
+CGEventRef PocketCreateRotate(double degrees,int phase) {
+    if(!isfinite(degrees)||fabs(degrees)>180||phase<1||phase>4)return NULL;
+    NSDictionary *info=@{(__bridge NSString*)kTLInfoKeyGestureSubtype:@(kTLInfoSubtypeRotate),
+        (__bridge NSString*)kTLInfoKeyGesturePhase:@(phase),(__bridge NSString*)kTLInfoKeyRotation:@(degrees)};
+    CGEventRef event=tl_CGEventCreateFromGesture((__bridge CFDictionaryRef)info,(__bridge CFArrayRef)@[]);
+    NSEvent *decoded=event ? [NSEvent eventWithCGEvent:event]:nil;
+    if(!decoded||decoded.type!=NSEventTypeRotate||fabs(decoded.rotation-degrees)>0.001){if(event)CFRelease(event);return NULL;}
+    return event;
+}
+bool PocketPostRotate(double degrees,int phase){
+    CGEventRef event=PocketCreateRotate(degrees,phase);if(!event)return false;
+    CGEventPost(kCGHIDEventTap,event);CFRelease(event);return true;
+}
+CGEventRef PocketCreateSmartZoom(void){
+    NSDictionary *info=@{(__bridge NSString*)kTLInfoKeyGestureSubtype:@(kTLInfoSubtypeSmartMagnify)};
+    CGEventRef event=tl_CGEventCreateFromGesture((__bridge CFDictionaryRef)info,(__bridge CFArrayRef)@[]);
+    NSEvent *decoded=event ? [NSEvent eventWithCGEvent:event]:nil;
+    if(!decoded||decoded.type!=NSEventTypeSmartMagnify){if(event)CFRelease(event);return NULL;}
+    return event;
+}
+bool PocketPostSmartZoom(void){
+    CGEventRef event=PocketCreateSmartZoom();if(!event)return false;
+    CGEventPost(kCGHIDEventTap,event);CFRelease(event);return true;
+}

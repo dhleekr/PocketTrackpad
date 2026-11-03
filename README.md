@@ -4,9 +4,9 @@
 
 ### Your Mac. In your hand.
 
-An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four keys—Esc, Tab, Shift+Tab, Enter—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
+An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.2.0.zip) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.3.zip) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. The iPhone release was submitted to App Store review. Existing testers can install 1.2.0 (38) through TestFlight.
+1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest verified internal TestFlight build is 1.4.3 (44).
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -29,11 +29,19 @@ The Mac window shows the current connection round-trip time in milliseconds. Thi
 
 ## Four keys and a microphone
 
-The bottom row sends **Esc, Tab, Shift+Tab, and Enter** to the focused Mac app. Their meaning follows that app: Escape can dismiss or interrupt, Tab can navigate or complete, Shift+Tab can move backward or cycle Claude Code permission modes, and Enter can submit or confirm. The controller does not automatically approve prompts or press Enter after dictation.
+The bottom row defaults to **Esc, Tab, Backspace, and Enter**. In Settings → Quick keys, assign each position independently: plain keys, arrows, Shift+Tab, Ctrl+C, Copy, Paste, Undo, Redo, or Select all. Assignments survive app restarts. Shortcuts act on the focused Mac app; their meaning follows that app.
 
-Tap the microphone to dictate a short instruction in Korean or English. Review up to three lines, expand editing only when needed, and insert the text into the selected Mac field. Use Enter separately when ready to submit. Recognition requires on-device support for the selected language; the app does not fall back to server-based speech recognition, save audio files, or send audio to the Mac. Only the confirmed text is sent over the paired connection. An uncertain delivery is never automatically retried.
+Version 1.4.3 forwards the iPhone microphone to a virtual Mac input device. Open the GPT input window on the Mac, then tap the phone microphone to request recording; tap again to request stop. The trackpad remains available. Both apps must be 1.4 or later. The user verified dictation starts on the current compatible ChatGPT desktop app. Compatibility with other versions is not guaranteed. Automatic integration on macOS 14.2 or later registers a local hold-to-dictate shortcut; a first-time registration may require quitting and reopening GPT once.
 
-Both apps need version 1.2.0 or later for the new keys, Notification Center, Apps gesture, and dictation. The controller detects older receivers and asks for an update instead of sending unsupported commands.
+On the Mac app menu, choose **Microphone setup** once. The signed Core Audio driver requires administrator authentication and briefly restarts Mac audio. It leaves other audio drivers in place. Audio uses a separate authenticated Wi-Fi connection even when Bluetooth carries trackpad input. No audio file or transcript is created by PocketTrackpad; GPT performs recognition under its own settings and privacy policy. There is no PocketTrackpad recording-duration limit.
+
+Disconnecting or leaving the phone app stops capture. The Mac attempts to stop the same GPT recording and restores the previous microphone only after that stop is confirmed. If confirmation fails, it leaves a silent virtual input selected and asks you to check GPT, avoiding an unintended switch to a room microphone. PocketTrackpad does not submit the resulting message.
+
+Hold Backspace to repeat deletion, as on a keyboard. Tab, Space, and arrow assignments can also repeat; Enter and shortcuts remain single actions.
+
+Use iPhone and Mac **1.3.0 or later** for the expanded customizable key set. Older receivers continue to support their original commands; unsupported keys prompt for a Mac update. Trackpad movement and existing gestures retain their existing transport path.
+
+Settings → On-screen controls lets you hide the quick-key row, microphone button, and top controls independently. A 44-point reveal handle remains available; recording always keeps a stop button visible. Transient notices dismiss automatically, while the last microphone error remains in settings. Fold or expand the controls yourself with the arrow. They do not auto-hide, and the chosen state persists across restarts. The user verified this behavior in 1.4.3.
 
 ## A familiar set of gestures
 
@@ -43,8 +51,8 @@ Both apps need version 1.2.0 or later for the new keys, Notification Center, App
 | Double-tap, hold the second tap | Drag immediately; lift to release |
 | Two fingers | Momentum scrolling; page history and pinch zoom in supporting apps |
 | Two-finger tap | Right-click |
-| Two fingers inward from the right edge | Open Notification Center on lift; reverse to cancel |
-| Four-finger pinch inward | Show installed apps on lift; spread back to cancel |
+| Two fingers inward from the right edge | Reveal Notification Center; swipe outward after opening to close |
+| Four-finger pinch / spread | Show installed apps / reveal the desktop, with continuous progress |
 | Three-finger swipe | Mission Control, App Exposé, or desktop switching |
 
 Adjust cursor speed, natural scrolling, double-tap timing, press delay, and haptic behavior. Rotate the surface with the rotation button. The lock button defers system edge gestures; hold it to unlock. It cannot completely disable iOS Home or Control Center gestures.
@@ -140,3 +148,7 @@ Report reproducible bugs through GitHub Issues. Include your iOS/macOS versions,
 ## Copyright and third-party notices
 
 Copyright © 2026 Doohyun Lee. All rights reserved for original source and brand assets; this public repository does not grant an additional license to them. Third-party code retains its own license. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Virtual microphone
+
+The Mac build bundles a signed Core Audio driver derived from Apple's MIT-licensed NullAudio sample. See [third-party notices](THIRD_PARTY_NOTICES.md) and [driver provenance](virtual-microphone/vendor/SOURCE.txt). The iPhone build has no bundled speech model or speech-recognition dependency. The released 1.3 version used on-device recognition; 1.4 replaces that path with audio forwarding.

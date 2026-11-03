@@ -82,14 +82,14 @@ test("keyboard chunks round-trip unicode without splitting surrogate pairs") {
  let value=String(repeating:"한글 é 👩🏽‍💻 ",count:30),chunks=PadTextInput.keyboardChunks(value)
  return chunks.allSatisfy{$0.count<=20 && String(decoding:$0,as:UTF16.self).utf16.count==$0.count} && chunks.map{String(decoding:$0,as:UTF16.self)}.joined()==value
 }
-test("four-key interface is Escape Tab Shift-Tab Enter in order") {
- PadQuickKey.allCases.map(\.rawValue)==["escape","tab","shiftTab","enter"] && PadQuickKey.allCases.allSatisfy{BLEWire.valid([["type":"shortcut","name":$0.rawValue]])}
+test("default interface is Escape Tab Backspace Enter in order") {
+ PadQuickKey.defaults.map(\.rawValue)==["escape","tab","backspace","enter"] && PadQuickKey.allCases.allSatisfy{BLEWire.valid([["type":"shortcut","name":$0.rawValue]])}
 }
 test("Shift-Tab posts Tab with Shift while plain Tab has no modifier") {
  PadQuickKey.shiftTab.keyCode==48 && PadQuickKey.shiftTab.shift && PadQuickKey.tab.keyCode==48 && !PadQuickKey.tab.shift && !PadQuickKey.enter.shift && !PadQuickKey.escape.shift
 }
-test("removed arrow quick keys are not accepted by the wire") {
- !BLEWire.valid([["type":"shortcut","name":"up"]]) && !BLEWire.valid([["type":"shortcut","name":"down"]])
+test("custom arrow quick keys are accepted by the wire") {
+ BLEWire.valid([["type":"shortcut","name":"up"]]) && BLEWire.valid([["type":"shortcut","name":"down"]])
 }
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

@@ -2,8 +2,17 @@ import Cocoa
 import ApplicationServices
 import CoreImage
 
+@_silgen_name("PocketPostDockMotion") private func PocketPostDockMotion(_ progress:Double,_ delta:Double,_ velocity:Double,_ axis:Int32,_ phase:Int32)->Bool
 @_silgen_name("PocketPostDock") private func PocketPostDock(_ progress:Double,_ velocity:Double,_ axis:Int32,_ phase:Int32)->Bool
+@_silgen_name("PocketPostNotification") private func PocketPostNotification(_ progress:Double,_ delta:Double,_ velocity:Double,_ phase:Int32)->Bool
+@_silgen_name("PocketPostRotate") private func PocketPostRotate(_ delta:Double,_ phase:Int32)->Bool
+@_silgen_name("PocketPostSmartZoom") private func PocketPostSmartZoom()->Bool
 @_silgen_name("PocketPostMagnify") private func PocketPostMagnify(_ delta:Double,_ phase:Int32)->Bool
+
+#if POCKET_LOCAL_TEST
+@_silgen_name("PocketStartGestureCapture") private func PocketStartGestureCapture(_ path:UnsafePointer<CChar>)->Bool
+@_silgen_name("PocketStopGestureCapture") private func PocketStopGestureCapture()
+#endif
 
 // The permission-owning GUI process also owns every generated input event.
 final class InputEngine {
@@ -12,6 +21,8 @@ final class InputEngine {
     #endif
     private var dragging = false
     private var magnifying = false
+    private var rotating=false
+    private let keyRepeater=MacKeyRepeater()
     private var dockAxis:Int32=0
     private var dockProgress=0.0
     private var lastInput = Date()
@@ -74,8 +85,9 @@ final class InputEngine {
         }
     }
     private func releaseDrag() {
-        playback.discard();if let cancelled=scrollStream.cancel(){NativeScrollStream.post(cancelled)}
-        if dockAxis != 0 {_ = PocketPostDock(dockProgress,0,dockAxis,8);dockAxis=0;dockProgress=0}
+        keyRepeater.stop();playback.discard();if let cancelled=scrollStream.cancel(){NativeScrollStream.post(cancelled)}
+        if dockAxis != 0 {if dockAxis==9{_ = PocketPostNotification(dockProgress,0,0,8)}else{_ = PocketPostDock(dockProgress,0,dockAxis,8)};dockAxis=0;dockProgress=0}
+        if rotating{_ = PocketPostRotate(0,4);rotating=false}
         if magnifying { _ = PocketPostMagnify(0,4);magnifying=false }
         if dragging {
             let release=CGEvent(mouseEventSource:nil,mouseType:.leftMouseUp,mouseCursorPosition:CGEvent(source:nil)?.location ?? .zero,mouseButton:.left)
@@ -121,19 +133,27 @@ final class InputEngine {
             let observed = CGEvent(source:nil)?.location ?? .zero
             let p = Date().timeIntervalSince(lastMotion)<0.15 ? cursorPosition : observed
             if kind == "dockSwipe" {
-                let axis:Int32=d["name"] as? String=="horizontal" ? 1:2
+                let axis:Int32=d["name"] as? String=="horizontal" ? 1:d["name"] as? String=="scale" ? 3:d["name"] as? String=="notification" ? 9:2
                 let phase=d["phase"] as? String ?? "changed"
                 // A zero-distance begin is ignored by the Dock on macOS 27.
                 // Wait for the first movement and begin at that actual progress.
                 if dockAxis==0 && phase != "ended" && phase != "cancelled" && x != 0 {
-                    if PocketPostDock(x,0,axis,1){dockAxis=axis;dockProgress=x}
+                    if axis==9 ? PocketPostNotification(x,x,0,1):(axis==2 ? PocketPostDockMotion(x,x,0,axis,1):PocketPostDock(x,0,axis,1)){dockAxis=axis;dockProgress=x}
                     return "ok"
                 }
                 if dockAxis != 0 {
-                    dockProgress=x
-                    _ = PocketPostDock(x,y,dockAxis,phase=="ended" ? 4:phase=="cancelled" ? 8:2)
+                    let delta=x-dockProgress;dockProgress=x
+                    let nativePhase:Int32=phase=="ended" ? 4:phase=="cancelled" ? 8:2
+                    if dockAxis==9{_ = PocketPostNotification(x,delta,y,nativePhase)}else if dockAxis==2{_ = PocketPostDockMotion(x,delta,y,dockAxis,nativePhase)}else{_ = PocketPostDock(x,y,dockAxis,nativePhase)}
                     if phase=="ended" || phase=="cancelled" {dockAxis=0;dockProgress=0}
                 }
+            }else if kind == "key",let name=d["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable {
+                keyRepeater.handle(key,phase:d["phase"] as? String ?? "cancelled")
+            }else if kind == "smartZoom" {_ = PocketPostSmartZoom()
+            }else if kind == "rotate" {
+                let phase=d["phase"] as? String ?? "changed"
+                if phase=="ended" || phase=="cancelled"{if rotating{_ = PocketPostRotate(0,4)};rotating=false}
+                else{if !rotating{rotating=PocketPostRotate(0,1)};if rotating && x != 0{_ = PocketPostRotate(x,2)}}
             } else if kind == "magnify" {
                 let phase=d["phase"] as? String ?? "changed"
                 if phase=="ended" || phase=="cancelled" { if magnifying{_ = PocketPostMagnify(0,4)};magnifying=false }
@@ -153,9 +173,9 @@ final class InputEngine {
                 let momentum = d["momentum"] as? String ?? "none"
                 if let event=scrollStream.event(x:x,y:y,phase:phase,momentum:momentum) {
                     #if POCKET_LOCAL_TEST
-                    NativeScrollStream.post(event,companionEnabled:!localWheelOnly)
+                    NativeScrollStream.post(event,companionEnabled:!localWheelOnly && d["name"] as? String != "contentOnly")
                     #else
-                    NativeScrollStream.post(event)
+                    NativeScrollStream.post(event,companionEnabled:d["name"] as? String != "contentOnly")
                     #endif
                     let actualPhase=[1:"began",2:"changed",4:"ended",8:"cancelled"][Int(event.getIntegerValueField(.scrollWheelEventScrollPhase))]
                     let actualMomentum=[0:"none",1:"began",2:"changed",3:"ended"][Int(event.getIntegerValueField(.scrollWheelEventMomentumPhase))]
@@ -188,7 +208,7 @@ final class InputEngine {
                     "enter":(36,[]), "escape":(53,[]), "tab":(48,[]), "delete":(51,[]),
                     "left":(123,[]), "right":(124,[]), "up":(126,[]), "down":(125,[]),
                     "spotlight":(49,.maskCommand), "showDesktop":(103,[]), "switchApp":(48,.maskCommand),
-                    "play":(49,[]) ]
+                    "play":(49,[]), "lookup":(2,[.maskControl,.maskCommand]) ]
                 if let key=PadQuickKey(rawValue:name){
                     for event in MacQuickKeys.events(for:key){event.post(tap:.cghidEventTap)}
                 } else if ["notifications","apps"].contains(name){
@@ -241,6 +261,8 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     private var window:NSWindow!
     private let engine=InputEngine()
     private var wifi:NativeWiFiHost?
+    private var microphone:MacMicrophoneHost?
+    private var microphoneStatus:NSTextField!
     private var bluetooth:BLEReverseHost?
     private var permissionTimer:Timer?
     private var status:NSTextField!
@@ -249,6 +271,8 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     private var connectionState=HostConnectionState()
     #if POCKET_LOCAL_TEST
     private var pageTestTimer:Timer?
+    @objc private func testNotification(){MacSystemActions.perform("notifications")}
+    @objc private func testNotificationClose(){MacSystemActions.testCloseNotification()}
     @objc private func testWheel(){runPageTest(companion:false)}
     @objc private func testPan(){runPageTest(companion:true)}
     @objc private func testForward(){runPageTest(companion:true,direction:-1)}
@@ -299,6 +323,15 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
             self.refreshLatency()
         }
     }
+    func applicationShouldTerminate(_ sender:NSApplication)->NSApplication.TerminateReply {
+        _ = engine.handle(["type":"up"])
+        Task{@MainActor in await microphone?.shutdown();sender.reply(toApplicationShouldTerminate:true)}
+        return .terminateLater
+    }
+    @objc private func setupMicrophone(){
+        guard let url=Bundle.main.url(forResource:"InstallMicrophone",withExtension:"command",subdirectory:"Microphone") else{return}
+        NSWorkspace.shared.open(url)
+    }
     @objc private func revealConnection(_ notification:Notification){
         window?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
     }
@@ -306,34 +339,63 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         NSApp.setActivationPolicy(.accessory)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(revealConnection(_:)),name:ReceiverInstance.reopen,object:String(ProcessInfo.processInfo.processIdentifier))
         let menu=NSMenu(),applicationItem=NSMenuItem(),applicationMenu=NSMenu()
+        let microphoneMenu=NSMenuItem(title:MacText("Microphone setup…"),action:#selector(setupMicrophone),keyEquivalent:"");microphoneMenu.target=self;applicationMenu.addItem(microphoneMenu)
+        #if POCKET_LOCAL_TEST
+        let testNotification=NSMenuItem(title:"Test Notification Center",action:#selector(testNotification),keyEquivalent:"");testNotification.target=self;applicationMenu.addItem(testNotification)
+        let testClose=NSMenuItem(title:"Test Notification Center Close",action:#selector(testNotificationClose),keyEquivalent:"");testClose.target=self;applicationMenu.addItem(testClose)
+        #endif
+        applicationMenu.addItem(.separator())
         applicationMenu.addItem(NSMenuItem(title:MacText("Quit PocketTrackpad"),action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q"))
         applicationItem.submenu=applicationMenu;menu.addItem(applicationItem);NSApp.mainMenu=menu
-        window=NSWindow(contentRect:NSRect(x:0,y:0,width:440,height:500),styleMask:[.titled,.closable,.miniaturizable],backing:.buffered,defer:false)
+        window=NSWindow(contentRect:NSRect(x:0,y:0,width:380,height:440),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
         window.title="PocketTrackpad for Mac";window.delegate=self;window.isReleasedWhenClosed=false
-        let title=NSTextField(labelWithString:"PocketTrackpad")
-        title.font = .systemFont(ofSize:27,weight:.semibold);title.frame=NSRect(x:30,y:441,width:380,height:37);window.contentView?.addSubview(title)
-        let subtitle=NSTextField(wrappingLabelWithString:MacText("Your iPhone. Your Mac trackpad."))
-        subtitle.textColor = .secondaryLabelColor;subtitle.frame=NSRect(x:30,y:408,width:380,height:26);window.contentView?.addSubview(subtitle)
-        status=NSTextField(labelWithString:MacText("Waiting for iPhone"));status.alignment = .center;status.frame=NSRect(x:25,y:365,width:390,height:24);window.contentView?.addSubview(status)
-        latencyLabel=NSTextField(labelWithString:"");latencyLabel.alignment = .center
-        latencyLabel.font = .monospacedDigitSystemFont(ofSize:11,weight:.regular);latencyLabel.textColor = .secondaryLabelColor
-        latencyLabel.frame=NSRect(x:25,y:344,width:390,height:18)
+        window.contentMinSize=NSSize(width:360,height:440)
+        guard let content=window.contentView else{return}
+        func label(_ text:String,size:CGFloat=13,secondary:Bool=false)->NSTextField {
+            let field=NSTextField(wrappingLabelWithString:text)
+            field.font = .systemFont(ofSize:size);field.textColor=secondary ? .secondaryLabelColor:.labelColor
+            field.setContentCompressionResistancePriority(.required,for:.vertical)
+            return field
+        }
+        let title=label("PocketTrackpad",size:20);title.font = .systemFont(ofSize:20,weight:.semibold)
+        let subtitle=label(MacText("Your iPhone. Your Mac trackpad."),size:12,secondary:true)
+        let identity=NSStackView(views:[title,subtitle]);identity.orientation = .vertical;identity.alignment = .leading;identity.spacing=3
+        let icon=NSImageView(image:NSApp.applicationIconImage);icon.translatesAutoresizingMaskIntoConstraints=false
+        NSLayoutConstraint.activate([icon.widthAnchor.constraint(equalToConstant:34),icon.heightAnchor.constraint(equalToConstant:34)])
+        let heading=NSStackView(views:[icon,identity]);heading.orientation = .horizontal;heading.alignment = .centerY;heading.spacing=10
+        status=label(MacText("Waiting for iPhone"),size:13);status.alignment = .center
+        latencyLabel=label("",size:11,secondary:true);latencyLabel.alignment = .center
+        latencyLabel.font = .monospacedDigitSystemFont(ofSize:11,weight:.regular)
         latencyLabel.toolTip=MacText("Round-trip time between iPhone and Mac, not total input-to-display latency.")
-        window.contentView?.addSubview(latencyLabel)
-        let qr=NSImageView(frame:NSRect(x:128,y:155,width:184,height:184));qr.imageScaling = .scaleProportionallyUpOrDown;window.contentView?.addSubview(qr)
-        let hint=NSTextField(wrappingLabelWithString:MacText("Open PocketTrackpad on iPhone and scan this QR. Then choose Wi-Fi or Bluetooth."))
-        hint.alignment = .center;hint.font = .systemFont(ofSize:13);hint.textColor = .secondaryLabelColor;hint.frame=NSRect(x:35,y:104,width:370,height:45);window.contentView?.addSubview(hint)
-        let copy=NSButton(title:MacText("Copy pairing link"),target:self,action:#selector(copyPairing));copy.frame=NSRect(x:30,y:62,width:185,height:32);window.contentView?.addSubview(copy)
-        let permission=NSButton(title:MacText("Enable Mac control"),target:self,action:#selector(enableControl));permission.frame=NSRect(x:225,y:62,width:185,height:32);window.contentView?.addSubview(permission)
-        let note=NSTextField(labelWithString:MacText("Closing this window keeps the connection running."));note.font = .systemFont(ofSize:11);note.textColor = .secondaryLabelColor;note.frame=NSRect(x:30,y:25,width:290,height:22);window.contentView?.addSubview(note)
-        let quit=NSButton(title:MacText("Quit"),target:NSApp,action:#selector(NSApplication.terminate(_:)));quit.toolTip=MacText("Disconnect and quit PocketTrackpad");quit.frame=NSRect(x:337,y:20,width:73,height:29);window.contentView?.addSubview(quit)
-        #if POCKET_LOCAL_TEST
-        let testWheel=NSButton(title:"Test wheel",target:self,action:#selector(testWheel));testWheel.frame=NSRect(x:20,y:340,width:190,height:25);window.contentView?.addSubview(testWheel)
-        let testPan=NSButton(title:"Test wheel + pan",target:self,action:#selector(testPan));testPan.frame=NSRect(x:220,y:340,width:190,height:25);window.contentView?.addSubview(testPan)
-        let testForward=NSButton(title:"Test forward",target:self,action:#selector(testForward));testForward.frame=NSRect(x:420,y:340,width:150,height:25);window.contentView?.addSubview(testForward)
-        let testCancel=NSButton(title:"Test cancel",target:self,action:#selector(testCancel));testCancel.frame=NSRect(x:580,y:340,width:150,height:25);window.contentView?.addSubview(testCancel)
-        #endif
+        let connection=NSStackView(views:[status,latencyLabel]);connection.orientation = .vertical;connection.alignment = .centerX;connection.spacing=4
+        let qr=NSImageView();qr.imageScaling = .scaleProportionallyUpOrDown
+        qr.translatesAutoresizingMaskIntoConstraints=false
+        NSLayoutConstraint.activate([qr.widthAnchor.constraint(equalToConstant:144),qr.heightAnchor.constraint(equalToConstant:144)])
+        let hint=label(MacText("Open PocketTrackpad on iPhone and scan this QR. Then choose Wi-Fi or Bluetooth."),size:12,secondary:true);hint.alignment = .center
+        let separator=NSBox();separator.boxType = .separator
+        let permission=NSButton(title:MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control"),target:self,action:#selector(enableControl))
+        permission.bezelStyle = .rounded;permission.isEnabled = !AXIsProcessTrusted();permission.isHidden=AXIsProcessTrusted()
+        microphoneStatus=label("",size:12,secondary:true);microphoneStatus.isHidden=true
+        microphoneStatus.alignment = .center
+        let note=label(MacText("Closing this window keeps the connection running."),size:11,secondary:true)
+        let quit=NSButton(title:MacText("Quit"),target:NSApp,action:#selector(NSApplication.terminate(_:)));quit.bezelStyle = .rounded
+        quit.toolTip=MacText("Disconnect and quit PocketTrackpad")
+        let footer=NSStackView(views:[note,quit]);footer.orientation = .horizontal;footer.alignment = .centerY;footer.spacing=18
+        quit.setContentHuggingPriority(.required,for:.horizontal)
+        let stack=NSStackView(views:[heading,connection,qr,hint,separator,permission,microphoneStatus]);stack.orientation = .vertical;stack.alignment = .centerX;stack.spacing=12
+        for item in [stack,footer]{item.translatesAutoresizingMaskIntoConstraints=false;content.addSubview(item)}
+        NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo:content.leadingAnchor,constant:22),stack.trailingAnchor.constraint(equalTo:content.trailingAnchor,constant:-22),stack.topAnchor.constraint(equalTo:content.topAnchor,constant:20),stack.bottomAnchor.constraint(lessThanOrEqualTo:footer.topAnchor,constant:-16),footer.leadingAnchor.constraint(equalTo:stack.leadingAnchor),footer.trailingAnchor.constraint(equalTo:stack.trailingAnchor),footer.bottomAnchor.constraint(equalTo:content.bottomAnchor,constant:-16)])
+        for item in [heading,connection,hint,separator,microphoneStatus!]{item.widthAnchor.constraint(equalTo:stack.widthAnchor).isActive=true}
+        microphoneStatus.setContentHuggingPriority(.defaultLow,for:.horizontal)
         window.center();window.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
+        #if POCKET_LOCAL_TEST
+        if ProcessInfo.processInfo.arguments.contains("--capture-trackpad") {
+            let path=NSTemporaryDirectory()+"PocketTrackpad-native-gestures.jsonl"
+            let started=path.withCString{PocketStartGestureCapture($0)}
+            status.stringValue=started ? "Gesture capture ready (60 seconds)":"Gesture capture unavailable"
+            DispatchQueue.main.asyncAfter(deadline:.now()+60){PocketStopGestureCapture()}
+        }
+        #endif
         do {
             let key=try PairingKey.load()
             let address=MacNetworkAddress.ipv4() ?? "127.0.0.1"
@@ -342,15 +404,31 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
                 filter.setValue(Data(pairingLink.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel")
                 if let output=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(output,from:output.extent){qr.image=NSImage(cgImage:cg,size:NSSize(width:184,height:184))}
             }
+            microphone=try? MacMicrophoneHost(token:key,report:{[weak self] text in
+                let failed=text.hasPrefix("Microphone start failed:")
+                let message:String
+                if text.hasSuffix("restartRequired"){message="GPT microphone registered. Quit and reopen GPT once, then try again."}
+                else if text.hasSuffix("shortcutConfiguration"){message="GPT microphone shortcut could not be registered. Existing shortcuts were preserved."}
+                else if text.hasSuffix("alreadyRecording"){message="Finish the existing GPT recording before starting the iPhone microphone."}
+                else{message=failed ? "Could not open GPT dictation. Click the GPT input and try again.":text}
+                self?.microphoneStatus.stringValue=MacText(message)
+                self?.microphoneStatus.isHidden = !(failed || text=="iPhone microphone active" || text=="Stop recording in GPT; virtual microphone is silent")
+                // Bounded startup stages only: no audio, transcripts, tokens or window contents.
+                let url=URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("PocketTrackpad-microphone-stages.json")
+                var events=(try? JSONSerialization.jsonObject(with:Data(contentsOf:url))) as? [[String:String]] ?? []
+                events.append(["time":ISO8601DateFormatter().string(from:Date()),"stage":text])
+                if let data=try? JSONSerialization.data(withJSONObject:Array(events.suffix(32))),FileManager.default.createFile(atPath:url.path,contents:data,attributes:[.posixPermissions:0o600]) == false {return}
+            })
             wifi=try NativeWiFiHost(token:key,apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.wifi)})
             bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.bluetooth)})
         }catch{status.stringValue=MacText("Could not start. Reopen PocketTrackpad.")}
         permissionTimer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
             self?.refreshLatency()
+            permission.isEnabled = !AXIsProcessTrusted();permission.isHidden=AXIsProcessTrusted()
+            permission.title=MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control")
             self?.window.title=AXIsProcessTrusted() ? "PocketTrackpad for Mac":MacText("PocketTrackpad · Enable Mac control")
         }
     }
-    @objc private func copyPairing(){NSPasteboard.general.clearContents();NSPasteboard.general.setString(pairingLink,forType:.string)}
     @objc private func enableControl(){
         let options=[kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String:true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)

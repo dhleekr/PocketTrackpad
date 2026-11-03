@@ -25,3 +25,17 @@
 "Round-trip time between iPhone and Mac, not total input-to-display latency." = "Round-trip time between iPhone and Mac, not total input-to-display latency.";
 "Quit PocketTrackpad" = "Quit PocketTrackpad";
 "Disconnect and quit PocketTrackpad" = "Disconnect and quit PocketTrackpad";
+"Set up microphone" = "Set up microphone";
+"One-time Mac microphone setup" = "One-time Mac microphone setup";
+"Microphone ready" = "Microphone ready";
+"iPhone microphone active" = "iPhone microphone active";
+"Microphone stopped" = "Microphone stopped";
+"Stop recording in GPT; virtual microphone is silent" = "Stop recording in GPT; virtual microphone is silent";
+
+"Mac control enabled" = "Mac control enabled";
+
+"Microphone setup…" = "Microphone setup…";
+"Could not open GPT dictation. Click the GPT input and try again." = "Could not open GPT dictation. Click the GPT input and try again.";
+"GPT microphone registered. Quit and reopen GPT once, then try again." = "GPT microphone registered. Quit and reopen GPT once, then try again.";
+"GPT microphone shortcut could not be registered. Existing shortcuts were preserved." = "GPT microphone shortcut could not be registered. Existing shortcuts were preserved.";
+"Finish the existing GPT recording before starting the iPhone microphone." = "Finish the existing GPT recording before starting the iPhone microphone.";

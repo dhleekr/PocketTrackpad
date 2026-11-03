@@ -3,5 +3,4 @@
 "NSLocalNetworkUsageDescription" = "같은 Wi-Fi 네트워크의 Mac으로 트랙패드 입력을 전송합니다.";
 "CFBundleDisplayName" = "트랙패드";
 
-"NSMicrophoneUsageDescription" = "녹음을 시작할 때만 마이크를 사용하며 음성은 아이폰 안에서 인식합니다.";
-"NSSpeechRecognitionUsageDescription" = "말한 내용을 아이폰 안에서 텍스트로 바꾼 뒤, 직접 전송할 때만 연결된 Mac에 보냅니다.";
+"NSMicrophoneUsageDescription" = "마이크 버튼을 누르면 아이폰 소리를 연결한 Mac에 직접 보냅니다. 음성 인식은 GPT가 처리합니다.";

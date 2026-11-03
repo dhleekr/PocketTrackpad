@@ -25,3 +25,17 @@
 "Round-trip time between iPhone and Mac, not total input-to-display latency." = "아이폰과 Mac 사이의 왕복 시간입니다. 입력부터 화면 반영까지의 전체 지연은 아닙니다.";
 "Quit PocketTrackpad" = "PocketTrackpad 종료";
 "Disconnect and quit PocketTrackpad" = "연결을 끊고 PocketTrackpad 완전 종료";
+"Set up microphone" = "마이크 설정";
+"One-time Mac microphone setup" = "최초 한 번 마이크 설치가 필요합니다";
+"Microphone ready" = "마이크 사용 가능";
+"iPhone microphone active" = "아이폰 마이크 사용 중";
+"Microphone stopped" = "마이크 꺼짐";
+"Stop recording in GPT; virtual microphone is silent" = "GPT에서 녹음을 종료하세요. 마이크 소리는 차단됐습니다.";
+
+"Mac control enabled" = "Mac 제어 허용됨";
+
+"Microphone setup…" = "마이크 설치…";
+"Could not open GPT dictation. Click the GPT input and try again." = "GPT 음성 입력을 열지 못했습니다. GPT 입력 칸을 클릭하고 다시 시도하세요.";
+"GPT microphone registered. Quit and reopen GPT once, then try again." = "GPT 마이크 연동을 등록했습니다. GPT 앱을 한 번 완전히 종료한 뒤 다시 열어주세요.";
+"GPT microphone shortcut could not be registered. Existing shortcuts were preserved." = "GPT 마이크 단축키를 등록하지 못했습니다. 기존 단축키는 보존했습니다.";
+"Finish the existing GPT recording before starting the iPhone microphone." = "GPT에서 진행 중인 녹음을 끝낸 뒤 아이폰 마이크를 시작하세요.";

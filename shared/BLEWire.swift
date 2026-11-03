@@ -9,8 +9,8 @@ enum BLEWire {
     static let reverseService="7647DA30-730B-49AA-AB58-7812CE562410"
     static let maxFrame=16384
     static func valid(_ events:[[String:Any]])->Bool {
-        let types:Set<String>=["move","scroll","magnify","dockSwipe","click","double","right","down","up","shortcut","status","text"]
-        let shortcuts=Set(["mission","appWindows","desktopLeft","desktopRight","notifications","apps"]+PadQuickKey.allCases.map(\.rawValue))
+        let types:Set<String>=["move","scroll","magnify","dockSwipe","click","double","right","down","up","shortcut","status","text","rotate","smartZoom","key"]
+        let shortcuts=Set(["mission","appWindows","desktopLeft","desktopRight","notifications","apps","showDesktop","lookup"]+PadQuickKey.allCases.map(\.rawValue))
         guard (1...64).contains(events.count) else {return false}
         for e in events {
             guard let t=e["type"] as? String,types.contains(t) else {return false}
@@ -23,8 +23,15 @@ enum BLEWire {
             if t=="dockSwipe" {
                 guard let x=e["x"] as? NSNumber,abs(x.doubleValue)<=2,
                     let y=e["y"] as? NSNumber,abs(y.doubleValue)<=10,
-                    let name=e["name"] as? String,["horizontal","vertical"].contains(name),
+                    let name=e["name"] as? String,["horizontal","vertical","scale","notification"].contains(name),
                     let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
+            }
+            if t=="key" {
+                guard let name=e["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable,
+                    let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
+            }
+            if t=="rotate" {
+                guard let x=e["x"] as? NSNumber,abs(x.doubleValue)<=180,let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
             }
             if t=="magnify" {
                 guard let x=e["x"] as? NSNumber,x.doubleValue.isFinite,abs(x.doubleValue)<=1,
@@ -159,11 +166,36 @@ enum PadTextInput {
     }
 }
 
-/// The phone labels and Mac key mapping share the same four-key contract.
+/// Persist raw values so labels and localization can change without losing assignments.
 enum PadQuickKey:String,CaseIterable {
-    case escape,tab,shiftTab,enter
-    var title:String {switch self{case .escape:return "Esc";case .tab:return "Tab";case .shiftTab:return "⇧ Tab";case .enter:return "Enter"}}
-    var accessibilityTitle:String {self == .shiftTab ? "Shift+Tab":title}
-    var keyCode:UInt16 {switch self{case .escape:return 53;case .tab,.shiftTab:return 48;case .enter:return 36}}
-    var shift:Bool {self == .shiftTab}
+    case escape,tab,shiftTab,backspace,enter,space,up,down,left,right,interrupt,copy,paste,undo,redo,selectAll
+    static let defaults:[Self]=[.escape,.tab,.backspace,.enter]
+    var title:String {switch self {
+    case .escape:return "Esc";case .tab:return "Tab";case .shiftTab:return "⇧ Tab"
+    case .backspace:return "⌫";case .enter:return "Enter";case .space:return "Space"
+    case .up:return "↑";case .down:return "↓";case .left:return "←";case .right:return "→"
+    case .interrupt:return "⌃ C";case .copy:return "⌘ C";case .paste:return "⌘ V"
+    case .undo:return "⌘ Z";case .redo:return "⇧ ⌘ Z";case .selectAll:return "⌘ A"
+    }}
+    var accessibilityTitle:String {switch self {
+    case .backspace:return "Backspace";case .shiftTab:return "Shift+Tab";case .space:return "Space"
+    case .up:return "Up arrow";case .down:return "Down arrow";case .left:return "Left arrow";case .right:return "Right arrow"
+    case .interrupt:return "Ctrl+C";case .copy:return "Copy";case .paste:return "Paste"
+    case .undo:return "Undo";case .redo:return "Redo";case .selectAll:return "Select all"
+    default:return title
+    }}
+    var keyCode:UInt16 {switch self {
+    case .escape:return 53;case .tab,.shiftTab:return 48;case .backspace:return 51;case .enter:return 36
+    case .space:return 49;case .up:return 126;case .down:return 125;case .left:return 123;case .right:return 124
+    case .interrupt,.copy:return 8;case .paste:return 9;case .undo,.redo:return 6;case .selectAll:return 0
+    }}
+    var repeatable:Bool {[Self.backspace,.tab,.space,.up,.down,.left,.right].contains(self)}
+    var shift:Bool {self == .shiftTab || self == .redo}
+    var command:Bool {[Self.copy,.paste,.undo,.redo,.selectAll].contains(self)}
+    var control:Bool {self == .interrupt}
+    var requiresV3:Bool {![Self.escape,.tab,.shiftTab,.enter].contains(self)}
+    static func restored(_ values:[String]?)->[Self] {
+        guard let values,values.count==4 else{return defaults}
+        return values.enumerated().map{Self(rawValue:$0.element) ?? defaults[$0.offset]}
+    }
 }

@@ -17,7 +17,7 @@ struct PocketTrackpadApp:App {
                 if ProcessInfo.processInfo.arguments.contains("--ui-test-pad") {
                     DispatchQueue.main.asyncAfter(deadline:.now()+1){
                         client.showConnection=false
-                        if ProcessInfo.processInfo.arguments.contains("--ui-test-dictation"){DispatchQueue.main.asyncAfter(deadline:.now()+0.4){client.showDictation=true}}
+
                         if ProcessInfo.processInfo.arguments.contains("--ui-test-landscape") {
                             DispatchQueue.main.asyncAfter(deadline:.now()+0.5){client.toggleOrientation()}
                         }
@@ -30,17 +30,17 @@ struct PocketTrackpadApp:App {
                 let activity:ConnectionActivity=value == .active ? .active:value == .inactive ? .inactive:.background
                 switch ConnectionLifecycle.effect(for:activity) {
                 case .resumeExisting: client.resumeConnection();UIApplication.shared.isIdleTimerDisabled=client.ready
-                case .releaseOnly: UIApplication.shared.isIdleTimerDisabled=false;client.releaseInput()
+                case .releaseOnly: if client.speech.recording || client.speech.finishing{client.speech.cancel()};UIApplication.shared.isIdleTimerDisabled=false;client.releaseInput()
                 case .suspend: UIApplication.shared.isIdleTimerDisabled=false;client.pause()
                 }
             }
             .sheet(isPresented:$client.showConnection) { SettingsSheet(client:client) }
-            .sheet(isPresented:$client.showDictation){DictationSheet(client:client)}
+
         }
     }
 }
 
-private enum SettingsPage:Hashable {case connection,clicks,haptics,gestures,about}
+private enum SettingsPage:Hashable {case connection,clicks,haptics,gestures,keys,microphone,appearance,about}
 struct SettingsSheet:View {
     @ObservedObject var client:TrackpadClient
     @State private var scanning=false
@@ -83,20 +83,14 @@ struct SettingsSheet:View {
                     Button {scanning=true} label:{Label(PTText("Scan Mac QR"),systemImage:"qrcode.viewfinder").frame(minHeight:28)}
                     NavigationLink(value:SettingsPage.connection){Text(PTText("Connection options"))}
                 }
-                Section(PTText("Pointer & scrolling")) {
-                    VStack(alignment:.leading,spacing:12) {
-                        SettingValueHeader(title:"Cursor speed",valueText:PTFormat("%.2f×",client.sensitivity))
-                        Slider(value:Binding(get:{PadTuning.speedPosition(client.sensitivity)},set:{client.sensitivity=PadTuning.speed(at:$0)}),in:0...1)
-                            .accessibilityLabel(PTText("Cursor speed")).accessibilityValue(PTFormat("%.2f×",client.sensitivity))
-                    }.padding(.vertical,6)
-                    Toggle(PTText("Natural scrolling"),isOn:$client.naturalScroll)
-                }
                 Section {
-                    NavigationLink(value:SettingsPage.clicks){Label(PTText("Click & drag"),systemImage:"hand.tap")}
+                    NavigationLink(value:SettingsPage.gestures){Label(PTText("Trackpad gestures"),systemImage:"hand.draw")}
+                    NavigationLink(value:SettingsPage.keys){Label(PTText("Quick keys"),systemImage:"keyboard")}
+                    NavigationLink(value:SettingsPage.microphone){Label(PTText("Microphone"),systemImage:"mic")}
+                    NavigationLink(value:SettingsPage.appearance){Label(PTText("On-screen controls"),systemImage:"slider.horizontal.3")}
                     NavigationLink(value:SettingsPage.haptics){Label(PTText("Haptics"),systemImage:"waveform")}
                 }
                 Section {
-                    NavigationLink(value:SettingsPage.gestures){Label(PTText("Gesture guide"),systemImage:"hand.draw")}
                     NavigationLink(value:SettingsPage.about){Label(PTText("About & support"),systemImage:"info.circle")}
                 }
             }
@@ -105,9 +99,12 @@ struct SettingsSheet:View {
             .navigationDestination(for:SettingsPage.self){page in
                 switch page {
                 case .connection:ConnectionSettings(client:client)
+                case .keys:QuickKeySettings(client:client)
+                case .microphone:MicrophoneSettings(speech:client.speech)
+                case .appearance:ControlVisibilitySettings(client:client)
                 case .clicks:ClickSettings(client:client)
                 case .haptics:HapticSettings(client:client)
-                case .gestures:GestureGuide()
+                case .gestures:GestureSettings(client:client)
                 case .about:AboutSettings()
                 }
             }
@@ -124,6 +121,9 @@ struct SettingsSheet:View {
             let arguments=ProcessInfo.processInfo.arguments
             if path.isEmpty,let argument=arguments.first(where:{$0.hasPrefix("--ui-test-page=")}) {
                 switch argument.split(separator:"=").last {
+                case "keys":path=[.keys]
+                case "microphone":path=[.microphone]
+                case "appearance":path=[.appearance]
                 case "clicks":path=[.clicks]
                 case "haptics":path=[.haptics]
                 case "gestures":path=[.gestures]
@@ -188,7 +188,7 @@ private struct SettingSlider:View {
         }.padding(.vertical,6)
     }
 }
-private struct ClickSettings:View {
+struct ClickSettings:View {
     @ObservedObject var client:TrackpadClient
     var body:some View {
         Form {
@@ -222,33 +222,6 @@ private struct HapticSettings:View {
         }.navigationTitle(PTText("Haptics")).navigationBarTitleDisplayMode(.inline)
     }
 }
-private struct GestureGuide:View {
-    var body:some View {
-        Form {
-            Section(PTText("One finger")) {
-                guide("Move","Move the pointer.")
-                guide("Tap","Click.")
-                guide("Double-tap","Double-click, or hold the second tap to drag.")
-            }
-            Section(PTText("Two fingers")) {
-                guide("Slide","Scroll in any direction. Swipe sideways to go back or forward in supported apps.")
-                guide("Tap","Right-click.")
-                guide("Swipe left from the right edge","Open Notification Center. Reverse before lifting to cancel.")
-                guide("Pinch","Zoom in apps that support trackpad zoom.")
-            }
-            Section {
-                guide("Swipe up","Mission Control.")
-                guide("Swipe down","App Exposé.")
-                guide("Swipe sideways","Switch desktops.")
-            } header:{Text(PTText("Three fingers"))} footer:{Text(PTText("Available gestures depend on the Mac app and macOS settings."))}
-            Section(PTText("Four fingers")){guide("Pinch inward","Show installed apps. Spread back before lifting to cancel.")}
-            Section(PTText("Dictation")){guide("Microphone button","Speak, review the text, then enter it in the active Mac text field.")}
-        }.navigationTitle(PTText("Gesture guide")).navigationBarTitleDisplayMode(.inline)
-    }
-    private func guide(_ title:String,_ detail:String)->some View {
-        VStack(alignment:.leading,spacing:6){Text(PTText(title));Text(PTText(detail)).font(.subheadline).foregroundStyle(.secondary)}.padding(.vertical,4)
-    }
-}
 private struct AboutSettings:View {
     var body:some View {
         Form {
@@ -259,5 +232,53 @@ private struct AboutSettings:View {
                 Link(PTText("Privacy policy"),destination:URL(string:"https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html")!)
             } footer:{Text(PTText("Requires the PocketTrackpad Mac app and Accessibility permission. Your input is sent directly to your Mac."))}
         }.navigationTitle(PTText("About & support")).navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct QuickKeySettings:View {
+    @ObservedObject var client:TrackpadClient
+    var body:some View {
+        Form {
+            Section(PTText("Choose an action for each key")) {
+                ForEach(0..<4,id:\.self){index in
+                    Picker(PTFormat("Key %d",index+1),selection:Binding(get:{client.quickKeys[index]},set:{client.quickKeys[index]=$0})) {
+                        ForEach(PadQuickKey.allCases,id:\.self){key in Text(PTText(key.accessibilityTitle)).tag(key)}
+                    }
+                }
+            }
+            Section {Button(PTText("Restore default keys")){client.quickKeys=PadQuickKey.defaults}}
+        }.navigationTitle(PTText("Quick keys"))
+    }
+}
+
+private struct MicrophoneSettings:View {
+    @ObservedObject var speech:RemoteMicrophone
+    var body:some View {
+        Form {
+            if let error=speech.error {Section(PTText("Last microphone error")){Text(error).foregroundStyle(.secondary)}}
+            Section(PTText("Microphone for GPT")) {
+                Text(PTText("Open the GPT input window on your Mac. Tap the iPhone microphone once to start, and again to stop. The trackpad stays available."))
+            }
+            Section(PTText("One-time Mac setup")) {
+                Text(PTText("In the Mac app, choose Set up microphone. This installs the virtual input device. Mac administrator authentication is required once."))
+            }
+            Section {
+                Text(PTText("Audio uses Wi-Fi. You can keep using Bluetooth for the trackpad."))
+            } header:{Text(PTText("Connection"))} footer:{Text(PTText("PocketTrackpad sends audio directly to your Mac without saving recordings. GPT handles recognition under its own settings. Keep the iPhone app open."))}
+        }.navigationTitle(PTText("Microphone"))
+    }
+}
+
+private struct ControlVisibilitySettings:View {
+    @ObservedObject var client:TrackpadClient
+    var body:some View {
+        Form {
+            Section {
+                Toggle(PTText("Quick key row"),isOn:$client.showQuickKeys)
+                Toggle(PTText("Microphone button"),isOn:$client.showMicrophone)
+                Toggle(PTText("Lock, rotation & settings"),isOn:$client.showTopControls)
+            } footer:{Text(PTText("Use the arrow to show or hide controls. Your choice is saved."))}
+            Section {Text(PTText("The stop button stays available while recording. Messages disappear after a few seconds; the last microphone error remains in Microphone settings.")).foregroundStyle(.secondary)}
+        }.navigationTitle(PTText("On-screen controls"))
     }
 }

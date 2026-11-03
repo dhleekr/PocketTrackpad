@@ -105,7 +105,7 @@ import Combine
                     authenticated=true;manager?.stopAdvertising()
                 }
                 guard let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
-                if let version=object["protocol"] as? Int{extendedInput=version>=2}
+                if let version=object["protocol"] as? Int{extendedInput=version>=2;customKeys=version>=3;gestureOptions=version>=4;remoteMicrophone=version>=5;continuousSystemGestures=version>=6}
                 if let id=object["id"] as? Int,let token=textReceipts.removeValue(forKey:id){onTextAck?(token,status=="ok")}
                 diagnostics?.record(.ack,sequence:object["id"] as? Int)
                 lastReply=Date();ready=status=="ok";message=ready ? PTFormat("Bluetooth connected · %d ms",latencyMS):PTText("Check PocketTrackpad input permission on the Mac.")
@@ -124,6 +124,10 @@ import Combine
     private func pump(){guard let manager,let input,let peer else{return};while let data=packets.first{guard manager.updateValue(data,for:input,onSubscribedCentrals:[peer]) else{return};packets.removeFirst();diagnostics?.record(.sendComplete,count:data.count,pending:packets.count)}}
     func peripheralManagerIsReady(toUpdateSubscribers peripheral:CBPeripheralManager){guard peripheral === manager else{return};pump();flush()}
     private(set) var extendedInput=false
+    private(set) var customKeys=false
+    private(set) var gestureOptions=false
+    private(set) var remoteMicrophone=false
+    private(set) var continuousSystemGestures=false
     var onTextAck:((String,Bool)->Void)?
     private var textReceipts=[Int:String]()
     func send(_ events:[PadEvent]){
@@ -141,7 +145,7 @@ import Combine
     private func flush(){
         guard authenticated,packets.isEmpty,!queue.isEmpty else{return}
         let urgent=queue.contains{event in
-            if !["move","scroll","magnify","dockSwipe"].contains(event.type){return true}
+            if !["move","scroll","magnify","rotate","dockSwipe"].contains(event.type){return true}
             return event.phase=="began" || event.phase=="cancelled" || (event.phase=="ended" && (event.momentum==nil || event.momentum=="none" || event.momentum=="ended"))
         }
         let now=ProcessInfo.processInfo.systemUptime
@@ -160,6 +164,6 @@ import Combine
             self.manager?.removeAllServices();self.clearSession()
         }
     }
-    private func clearSession(){extendedInput=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
+    private func clearSession(){extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
     private func restart(_ text:String){clearSession();if enabled{advertise()};message=text}
 }

@@ -3,5 +3,4 @@
 "NSLocalNetworkUsageDescription" = "Send trackpad input to your Mac over the same Wi-Fi network.";
 "CFBundleDisplayName" = "Trackpad";
 
-"NSMicrophoneUsageDescription" = "Use the microphone only when you start dictation. Audio is recognized on this iPhone.";
-"NSSpeechRecognitionUsageDescription" = "Recognize speech on this iPhone and send the text to your paired Mac only when you choose.";
+"NSMicrophoneUsageDescription" = "Use your iPhone microphone to send audio directly to your paired Mac when you press the microphone button. GPT handles recognition.";
