@@ -39,3 +39,37 @@
 "GPT microphone registered. Quit and reopen GPT once, then try again." = "GPT 마이크 연동을 등록했습니다. GPT 앱을 한 번 완전히 종료한 뒤 다시 열어주세요.";
 "GPT microphone shortcut could not be registered. Existing shortcuts were preserved." = "GPT 마이크 단축키를 등록하지 못했습니다. 기존 단축키는 보존했습니다.";
 "Finish the existing GPT recording before starting the iPhone microphone." = "GPT에서 진행 중인 녹음을 끝낸 뒤 아이폰 마이크를 시작하세요.";
+
+"Computer setup…" = "컴퓨터 설정…";
+
+"Open Sound settings" = "사운드 설정 열기";
+
+"iPhone microphone is ready" = "아이폰 마이크 사용 준비됨";
+
+"Set up iPhone microphone" = "아이폰 마이크 설정";
+
+"The virtual microphone is installed. Open Sound settings to check your input device, or reinstall if it is missing. Select the iPhone microphone in PocketTrackpad to start dictation." = "가상 마이크가 설치되어 있습니다. 사운드 설정에서 입력 기기를 확인하세요. 문제가 있으면 다시 설치할 수 있습니다. 받아쓰기는 아이폰 PocketTrackpad의 마이크 버튼으로 시작합니다.";
+
+"Install the PocketTrackpad virtual microphone once. macOS will ask for your Mac administrator password. Audio will restart briefly; finish calls and recordings first." = "PocketTrackpad 가상 마이크를 한 번 설치합니다. macOS 관리자 인증이 필요하며 오디오가 잠시 재시작됩니다. 통화나 녹음을 마친 뒤 진행하세요.";
+
+"Install microphone" = "마이크 설치";
+
+"Reinstall microphone" = "마이크 다시 설치";
+
+"Cancel" = "취소";
+
+"Microphone installed" = "마이크 설치 완료";
+
+"Reopen GPT if needed, then tap the iPhone microphone. You can check the virtual input in System Settings → Sound." = "필요하면 GPT를 다시 연 뒤 아이폰 마이크를 누르세요. 시스템 설정 → 사운드에서 가상 입력 기기를 확인할 수 있습니다.";
+
+"Done" = "완료";
+
+"Microphone installation did not finish" = "마이크 설치를 완료하지 못했습니다";
+
+"No microphone permission was changed. Try again with a Mac administrator account." = "마이크 접근 권한은 변경하지 않았습니다. Mac 관리자 계정으로 다시 시도하세요.";
+
+"The macOS Installer will guide you through installing the optional virtual microphone. Only the installer requests administrator authorization. Audio restarts briefly; finish calls and recordings first." = "macOS 설치 프로그램이 선택 사항인 가상 마이크 설치를 안내합니다. 관리자 인증은 설치 프로그램에서만 요청합니다. 오디오가 잠시 재시작되므로 통화·녹음을 마친 뒤 진행하세요.";
+
+"Microphone installer unavailable" = "마이크 설치 프로그램을 찾을 수 없습니다";
+
+"Download the latest Mac app from the PocketTrackpad website and try again." = "PocketTrackpad 홈페이지에서 최신 Mac 앱을 다운로드한 뒤 다시 시도하세요.";

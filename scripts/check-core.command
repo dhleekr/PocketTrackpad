@@ -29,4 +29,8 @@ compile_run scroll NativeScroll.swift Tests/Scroll/main.swift "$TASK_CHECK/magni
 clang -O2 -c NativeDockSwipe.c -o "$TASK_CHECK/dock.o"
 clang -O2 Tests/DockSwipe/main.c "$TASK_CHECK/touch.o" "$TASK_CHECK/dock.o" -framework ApplicationServices -o "$TASK_CHECK/dock"
 "$TASK_CHECK/dock"
+
+clang -O2 Tests/Microphone/sources.c virtual-microphone/Loopback.c -framework CoreAudio -framework CoreFoundation -o "$TASK_CHECK/audio-sources"
+"$TASK_CHECK/audio-sources"
+
 print 'Core checks passed.'

@@ -24,8 +24,6 @@ done
 lipo -create "$TASK_BUILD/Microphone-arm64" "$TASK_BUILD/Microphone-x86_64" -output "$TASK_DRIVER/Contents/MacOS/PocketTrackpadMicrophone"
 cp virtual-microphone/Info.plist "$TASK_DRIVER/Contents/Info.plist"
 cp virtual-microphone/vendor/LICENSE.txt virtual-microphone/vendor/SOURCE.txt "$TASK_DRIVER/Contents/Resources/"
-cp virtual-microphone/InstallMicrophone.command "$TASK_APP/Contents/Resources/Microphone/"
-chmod +x "$TASK_APP/Contents/Resources/Microphone/InstallMicrophone.command"
 lipo -create "$TASK_BUILD/PocketTrackpad-arm64" "$TASK_BUILD/PocketTrackpad-x86_64" -output "$TASK_APP/Contents/MacOS/PocketTrackpad"
 mkdir -p "$TASK_APP/Contents/Resources/ThirdPartyNotices"
 cp vendor/TouchSynthesis/LICENSE vendor/TouchSynthesis/SOURCE.txt "$TASK_APP/Contents/Resources/ThirdPartyNotices/"
@@ -42,9 +40,11 @@ done
 iconutil -c icns "$TASK_BUILD/AppIcon.iconset" -o "$TASK_APP/Contents/Resources/AppIcon.icns"
 if [[ -n "${POCKET_MAC_SIGN_IDENTITY:-}" ]]; then
   codesign --force --options runtime --timestamp --sign "$POCKET_MAC_SIGN_IDENTITY" "$TASK_DRIVER"
+  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg"
   codesign --force --options runtime --timestamp --sign "$POCKET_MAC_SIGN_IDENTITY" "$TASK_APP"
 else
   codesign --force --sign - "$TASK_DRIVER"
+  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg"
   codesign --force --sign - "$TASK_APP"
   print 'LOCAL CANDIDATE ONLY: Developer ID signing and Apple notarization are still required.'
 fi

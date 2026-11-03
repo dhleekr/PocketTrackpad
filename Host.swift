@@ -329,8 +329,28 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         return .terminateLater
     }
     @objc private func setupMicrophone(){
-        guard let url=Bundle.main.url(forResource:"InstallMicrophone",withExtension:"command",subdirectory:"Microphone") else{return}
-        NSWorkspace.shared.open(url)
+        let installed=MacVirtualMicrophone.deviceID() != 0
+        let alert=NSAlert()
+        alert.messageText=MacText(installed ? "iPhone microphone is ready":"Set up iPhone microphone")
+        alert.informativeText=MacText(installed ? "The virtual microphone is installed. Open Sound settings to check your input device, or reinstall if it is missing. Select the iPhone microphone in PocketTrackpad to start dictation.":"The macOS Installer will guide you through installing the optional virtual microphone. Only the installer requests administrator authorization. Audio restarts briefly; finish calls and recordings first.")
+        alert.addButton(withTitle:MacText(installed ? "Open Sound settings":"Install microphone"))
+        alert.addButton(withTitle:MacText(installed ? "Reinstall microphone":"Cancel"))
+        if installed{alert.addButton(withTitle:MacText("Cancel"))}
+        alert.beginSheetModal(for:window){[weak self] result in
+            if installed && result == .alertFirstButtonReturn {
+                if let url=URL(string:"x-apple.systempreferences:com.apple.preference.sound"){NSWorkspace.shared.open(url)}
+            } else if (!installed && result == .alertFirstButtonReturn) || (installed && result == .alertSecondButtonReturn){self?.installMicrophone()}
+        }
+    }
+    private func installMicrophone(){
+        guard let package=Bundle.main.url(forResource:"PocketTrackpadMicrophone",withExtension:"pkg",subdirectory:"Microphone") else{
+            let alert=NSAlert();alert.alertStyle = .warning
+            alert.messageText=MacText("Microphone installer unavailable")
+            alert.informativeText=MacText("Download the latest Mac app from the PocketTrackpad website and try again.")
+            alert.beginSheetModal(for:window);return
+        }
+        // The signed package is opened by macOS Installer. The receiver never elevates itself.
+        NSWorkspace.shared.open(package)
     }
     @objc private func revealConnection(_ notification:Notification){
         window?.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true)
@@ -339,6 +359,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         NSApp.setActivationPolicy(.accessory)
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(revealConnection(_:)),name:ReceiverInstance.reopen,object:String(ProcessInfo.processInfo.processIdentifier))
         let menu=NSMenu(),applicationItem=NSMenuItem(),applicationMenu=NSMenu()
+        let controlMenu=NSMenuItem(title:MacText("Computer setup…"),action:#selector(enableControl),keyEquivalent:"");controlMenu.target=self;applicationMenu.addItem(controlMenu)
         let microphoneMenu=NSMenuItem(title:MacText("Microphone setup…"),action:#selector(setupMicrophone),keyEquivalent:"");microphoneMenu.target=self;applicationMenu.addItem(microphoneMenu)
         #if POCKET_LOCAL_TEST
         let testNotification=NSMenuItem(title:"Test Notification Center",action:#selector(testNotification),keyEquivalent:"");testNotification.target=self;applicationMenu.addItem(testNotification)
@@ -373,16 +394,16 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         NSLayoutConstraint.activate([qr.widthAnchor.constraint(equalToConstant:144),qr.heightAnchor.constraint(equalToConstant:144)])
         let hint=label(MacText("Open PocketTrackpad on iPhone and scan this QR. Then choose Wi-Fi or Bluetooth."),size:12,secondary:true);hint.alignment = .center
         let separator=NSBox();separator.boxType = .separator
-        let permission=NSButton(title:MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control"),target:self,action:#selector(enableControl))
-        permission.bezelStyle = .rounded;permission.isEnabled = !AXIsProcessTrusted();permission.isHidden=AXIsProcessTrusted()
+        let permission=NSButton(title:MacText("Computer setup…"),target:self,action:#selector(enableControl))
+        permission.bezelStyle = .rounded
+        let microphoneSetup=NSButton(title:MacText("Microphone setup…"),target:self,action:#selector(setupMicrophone));microphoneSetup.bezelStyle = .rounded
+        let setup=NSStackView(views:[permission,microphoneSetup]);setup.orientation = .horizontal;setup.spacing=12;setup.alignment = .centerY
         microphoneStatus=label("",size:12,secondary:true);microphoneStatus.isHidden=true
         microphoneStatus.alignment = .center
         let note=label(MacText("Closing this window keeps the connection running."),size:11,secondary:true)
-        let quit=NSButton(title:MacText("Quit"),target:NSApp,action:#selector(NSApplication.terminate(_:)));quit.bezelStyle = .rounded
-        quit.toolTip=MacText("Disconnect and quit PocketTrackpad")
-        let footer=NSStackView(views:[note,quit]);footer.orientation = .horizontal;footer.alignment = .centerY;footer.spacing=18
-        quit.setContentHuggingPriority(.required,for:.horizontal)
-        let stack=NSStackView(views:[heading,connection,qr,hint,separator,permission,microphoneStatus]);stack.orientation = .vertical;stack.alignment = .centerX;stack.spacing=12
+        note.alignment = .center
+        let footer=NSStackView(views:[note]);footer.orientation = .vertical;footer.alignment = .centerX
+        let stack=NSStackView(views:[heading,connection,qr,hint,separator,setup,microphoneStatus]);stack.orientation = .vertical;stack.alignment = .centerX;stack.spacing=12
         for item in [stack,footer]{item.translatesAutoresizingMaskIntoConstraints=false;content.addSubview(item)}
         NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo:content.leadingAnchor,constant:22),stack.trailingAnchor.constraint(equalTo:content.trailingAnchor,constant:-22),stack.topAnchor.constraint(equalTo:content.topAnchor,constant:20),stack.bottomAnchor.constraint(lessThanOrEqualTo:footer.topAnchor,constant:-16),footer.leadingAnchor.constraint(equalTo:stack.leadingAnchor),footer.trailingAnchor.constraint(equalTo:stack.trailingAnchor),footer.bottomAnchor.constraint(equalTo:content.bottomAnchor,constant:-16)])
         for item in [heading,connection,hint,separator,microphoneStatus!]{item.widthAnchor.constraint(equalTo:stack.widthAnchor).isActive=true}
@@ -424,8 +445,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         }catch{status.stringValue=MacText("Could not start. Reopen PocketTrackpad.")}
         permissionTimer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
             self?.refreshLatency()
-            permission.isEnabled = !AXIsProcessTrusted();permission.isHidden=AXIsProcessTrusted()
-            permission.title=MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control")
+            permission.toolTip=MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control")
             self?.window.title=AXIsProcessTrusted() ? "PocketTrackpad for Mac":MacText("PocketTrackpad · Enable Mac control")
         }
     }

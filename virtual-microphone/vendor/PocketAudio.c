@@ -162,8 +162,8 @@ static Float32								gVolume_Output_Master_Value		= 0.0;
 static bool									gMute_Input_Master_Value		= false;
 static bool									gMute_Output_Master_Value		= false;
 
-static const UInt32							kDataSource_NumberItems			= 4;
-#define										kDataSource_ItemNamePattern		"Data Source Item %d"
+static const UInt32							kDataSource_NumberItems			= 1;
+#define										kDataSource_ItemNamePattern		"iPhone Microphone"
 static UInt32								gDataSource_Input_Master_Value	= 0;
 static UInt32								gDataSource_Output_Master_Value	= 0;
 static UInt32								gDataDestination_PlayThru_Master_Value	= 0;
@@ -3716,7 +3716,7 @@ static OSStatus	NullAudio_GetControlPropertyData(AudioServerPlugInDriverRef inDr
 					FailWithAction(inDataSize < sizeof(CFStringRef), theAnswer = kAudioHardwareBadPropertySizeError, Done, "NullAudio_GetControlPropertyData: not enough space for the return value of kAudioSelectorControlPropertyItemName for the data source control");
 					FailWithAction(inQualifierDataSize != sizeof(UInt32), theAnswer = kAudioHardwareBadPropertySizeError, Done, "NullAudio_GetControlPropertyData: wrong size for the qualifier of kAudioSelectorControlPropertyItemName for the data source control");
 					FailWithAction(*((const UInt32*)inQualifierData) >= kDataSource_NumberItems, theAnswer = kAudioHardwareIllegalOperationError, Done, "NullAudio_GetControlPropertyData: the item in the qualifier is not valid for kAudioSelectorControlPropertyItemName for the data source control");
-					*((CFStringRef*)outData) = CFStringCreateWithFormat(NULL, NULL, CFSTR(kDataSource_ItemNamePattern), *((const UInt32*)inQualifierData));
+					*((CFStringRef*)outData) = CFStringCreateCopy(NULL, CFSTR(kDataSource_ItemNamePattern));
 					*outDataSize = sizeof(CFStringRef);
 					break;
 

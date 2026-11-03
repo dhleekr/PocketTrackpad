@@ -1,0 +1,6 @@
+#!/bin/sh
+# Only restart audio on the running system, never an alternate install target.
+if [ "${3:-/}" = "/" ]; then
+    /usr/bin/killall coreaudiod >/dev/null 2>&1 || true
+fi
+exit 0

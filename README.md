@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.3.zip) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.4.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -17,7 +17,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest verified internal TestFlight build is 1.4.3 (44).
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
-4. Keep the iPhone app open and start moving. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
+4. Keep the iPhone app open and start moving. Open the Mac DMG and drag PocketTrackpad to Applications. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
 
 When updating the Mac app, click **Quit** in the existing receiver before replacing it. Closing its window keeps it running. Run one receiver at a time.
 
@@ -33,7 +33,7 @@ The bottom row defaults to **Esc, Tab, Backspace, and Enter**. In Settings → Q
 
 Version 1.4.3 forwards the iPhone microphone to a virtual Mac input device. Open the GPT input window on the Mac, then tap the phone microphone to request recording; tap again to request stop. The trackpad remains available. Both apps must be 1.4 or later. The user verified dictation starts on the current compatible ChatGPT desktop app. Compatibility with other versions is not guaranteed. Automatic integration on macOS 14.2 or later registers a local hold-to-dictate shortcut; a first-time registration may require quitting and reopening GPT once.
 
-On the Mac app menu, choose **Microphone setup** once. The signed Core Audio driver requires administrator authentication and briefly restarts Mac audio. It leaves other audio drivers in place. Audio uses a separate authenticated Wi-Fi connection even when Bluetooth carries trackpad input. No audio file or transcript is created by PocketTrackpad; GPT performs recognition under its own settings and privacy policy. There is no PocketTrackpad recording-duration limit.
+In the Mac window, choose **Microphone setup** once. The signed Core Audio driver requires administrator authentication and briefly restarts Mac audio. It leaves other audio drivers in place. Audio uses a separate authenticated Wi-Fi connection even when Bluetooth carries trackpad input. No audio file or transcript is created by PocketTrackpad; GPT performs recognition under its own settings and privacy policy. There is no PocketTrackpad recording-duration limit.
 
 Disconnecting or leaving the phone app stops capture. The Mac attempts to stop the same GPT recording and restores the previous microphone only after that stop is confirmed. If confirmation fails, it leaves a silent virtual input selected and asks you to check GPT, avoiding an unintended switch to a room microphone. PocketTrackpad does not submit the resulting message.
 
@@ -152,3 +152,5 @@ Copyright © 2026 Doohyun Lee. All rights reserved for original source and brand
 ### Virtual microphone
 
 The Mac build bundles a signed Core Audio driver derived from Apple's MIT-licensed NullAudio sample. See [third-party notices](THIRD_PARTY_NOTICES.md) and [driver provenance](virtual-microphone/vendor/SOURCE.txt). The iPhone build has no bundled speech model or speech-recognition dependency. The released 1.3 version used on-device recognition; 1.4 replaces that path with audio forwarding.
+
+Mac 1.4.4 keeps Computer setup and Microphone setup visible in the receiver window. Microphone installation opens a separately signed macOS Installer package, with no Terminal window. Only Installer requests administrator authorization; the receiver does not elevate itself. The Sound input list exposes one iPhone microphone source. Quit is available in the app menu or with Command-Q; closing the window preserves the connection.

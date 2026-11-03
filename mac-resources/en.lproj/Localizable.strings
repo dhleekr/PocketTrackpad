@@ -39,3 +39,37 @@
 "GPT microphone registered. Quit and reopen GPT once, then try again." = "GPT microphone registered. Quit and reopen GPT once, then try again.";
 "GPT microphone shortcut could not be registered. Existing shortcuts were preserved." = "GPT microphone shortcut could not be registered. Existing shortcuts were preserved.";
 "Finish the existing GPT recording before starting the iPhone microphone." = "Finish the existing GPT recording before starting the iPhone microphone.";
+
+"Computer setup…" = "Computer setup…";
+
+"Open Sound settings" = "Open Sound settings";
+
+"iPhone microphone is ready" = "iPhone microphone is ready";
+
+"Set up iPhone microphone" = "Set up iPhone microphone";
+
+"The virtual microphone is installed. Open Sound settings to check your input device, or reinstall if it is missing. Select the iPhone microphone in PocketTrackpad to start dictation." = "The virtual microphone is installed. Open Sound settings to check your input device, or reinstall if it is missing. Select the iPhone microphone in PocketTrackpad to start dictation.";
+
+"Install the PocketTrackpad virtual microphone once. macOS will ask for your Mac administrator password. Audio will restart briefly; finish calls and recordings first." = "Install the PocketTrackpad virtual microphone once. macOS will ask for your Mac administrator password. Audio will restart briefly; finish calls and recordings first.";
+
+"Install microphone" = "Install microphone";
+
+"Reinstall microphone" = "Reinstall microphone";
+
+"Cancel" = "Cancel";
+
+"Microphone installed" = "Microphone installed";
+
+"Reopen GPT if needed, then tap the iPhone microphone. You can check the virtual input in System Settings → Sound." = "Reopen GPT if needed, then tap the iPhone microphone. You can check the virtual input in System Settings → Sound.";
+
+"Done" = "Done";
+
+"Microphone installation did not finish" = "Microphone installation did not finish";
+
+"No microphone permission was changed. Try again with a Mac administrator account." = "No microphone permission was changed. Try again with a Mac administrator account.";
+
+"The macOS Installer will guide you through installing the optional virtual microphone. Only the installer requests administrator authorization. Audio restarts briefly; finish calls and recordings first." = "The macOS Installer will guide you through installing the optional virtual microphone. Only the installer requests administrator authorization. Audio restarts briefly; finish calls and recordings first.";
+
+"Microphone installer unavailable" = "Microphone installer unavailable";
+
+"Download the latest Mac app from the PocketTrackpad website and try again." = "Download the latest Mac app from the PocketTrackpad website and try again.";
