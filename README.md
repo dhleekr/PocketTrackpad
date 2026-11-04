@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.4.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.5.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest verified internal TestFlight build is 1.4.3 (44).
+1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.6 (47).
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. Open the Mac DMG and drag PocketTrackpad to Applications. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -31,11 +31,17 @@ The Mac window shows the current connection round-trip time in milliseconds. Thi
 
 The bottom row defaults to **Esc, Tab, Backspace, and Enter**. In Settings → Quick keys, assign each position independently: plain keys, arrows, Shift+Tab, Ctrl+C, Copy, Paste, Undo, Redo, or Select all. Assignments survive app restarts. Shortcuts act on the focused Mac app; their meaning follows that app.
 
-Version 1.4.3 forwards the iPhone microphone to a virtual Mac input device. Open the GPT input window on the Mac, then tap the phone microphone to request recording; tap again to request stop. The trackpad remains available. Both apps must be 1.4 or later. The user verified dictation starts on the current compatible ChatGPT desktop app. Compatibility with other versions is not guaranteed. Automatic integration on macOS 14.2 or later registers a local hold-to-dictate shortcut; a first-time registration may require quitting and reopening GPT once.
+Version 1.4.6 forwards the iPhone microphone to a virtual Mac input device. In the Mac window, choose **Settings…**, click **Connect** beside each receiving desktop app. Both connections stay saved. PocketTrackpad reads the app’s existing dictation preference or opens its settings to read the shortcut. If no shortcut is assigned, setup opens the app’s shortcut control so you can assign one there and read it again. It never edits the other app’s preference files or silently creates shortcuts.
 
-In the Mac window, choose **Microphone setup** once. The signed Core Audio driver requires administrator authentication and briefly restarts Mac audio. It leaves other audio drivers in place. Audio uses a separate authenticated Wi-Fi connection even when Bluetooth carries trackpad input. No audio file or transcript is created by PocketTrackpad; GPT performs recognition under its own settings and privacy policy. There is no PocketTrackpad recording-duration limit.
+Codex global dictation uses the `globalDictationHotkey` preference from its local `.codex-global-state.json` file, read only. It does not reuse an injected command override from `keybindings.json`. Supported apps with accessible dictation controls are read through macOS Accessibility. Connected applications are monitored for shortcut changes. The receiver updates its own mapping when a dictation setting changes, and rechecks the app after a restart or whenever the saved mapping cannot be validated. Unsupported or inaccessible settings produce a setup prompt rather than a guessed shortcut. Manual connection remains available for unsupported versions. Automatic setup requires macOS 14.2 or later; desktop-app UI changes can affect compatibility.
 
-Disconnecting or leaving the phone app stops capture. The Mac attempts to stop the same GPT recording and restores the previous microphone only after that stop is confirmed. If confirmation fails, it leaves a silent virtual input selected and asks you to check GPT, avoiding an unintended switch to a room microphone. PocketTrackpad does not submit the resulting message.
+Click the receiving app’s input window, then tap the phone microphone to request recording; tap again to request stop. The trackpad remains available. Use iPhone and Mac 1.4.6 or later for this setup flow. The phone shows microphone state through its icon, without a text overlay.
+
+In the Mac window, choose **Settings… → iPhone microphone → Install…** once. The signed Core Audio driver requires administrator authentication and briefly restarts Mac audio. It leaves other audio drivers in place. Audio follows the selected connection without switching transports in the background. Wi-Fi uses its own authenticated TLS audio socket. Bluetooth uses a separate encrypted microphone characteristic, with speech-band audio compression and a bounded queue so audio cannot grow indefinitely behind trackpad input. Both apps must be 1.4.6 or later for Bluetooth audio. No audio file or transcript is created by PocketTrackpad; GPT performs recognition under its own settings and privacy policy. There is no PocketTrackpad recording-duration limit.
+
+Stop cancels the audio sender before sending the stop command; it does not wait for audio acknowledgements. Stop remains available until the Mac confirms it. Each recording has its own session ID, so late audio, replies, and cancellation from a previous recording cannot act on a new session. For a toggle shortcut, stopping returns to the original receiving app if focus has moved.
+
+Disconnecting or leaving the phone app stops capture. The Mac attempts to stop the same GPT recording and restores the previous microphone only after that stop is confirmed. If confirmation fails during a session, it leaves a silent virtual input selected to avoid switching an active recording to a room microphone. Quitting the Mac receiver explicitly restores the prior system input, with a built-in microphone fallback; the installed virtual device remains listed in Sound settings. PocketTrackpad does not submit the resulting message.
 
 Hold Backspace to repeat deletion, as on a keyboard. Tab, Space, and arrow assignments can also repeat; Enter and shortcuts remain single actions.
 
@@ -153,4 +159,4 @@ Copyright © 2026 Doohyun Lee. All rights reserved for original source and brand
 
 The Mac build bundles a signed Core Audio driver derived from Apple's MIT-licensed NullAudio sample. See [third-party notices](THIRD_PARTY_NOTICES.md) and [driver provenance](virtual-microphone/vendor/SOURCE.txt). The iPhone build has no bundled speech model or speech-recognition dependency. The released 1.3 version used on-device recognition; 1.4 replaces that path with audio forwarding.
 
-Mac 1.4.4 keeps Computer setup and Microphone setup visible in the receiver window. Microphone installation opens a separately signed macOS Installer package, with no Terminal window. Only Installer requests administrator authorization; the receiver does not elevate itself. The Sound input list exposes one iPhone microphone source. Quit is available in the app menu or with Command-Q; closing the window preserves the connection.
+The Mac receiver keeps a single Settings button in its window. Settings groups Mac control permission, microphone installation, and dictation connection. Microphone installation opens a separately signed macOS Installer package, with no Terminal window. Only Installer requests administrator authorization; the receiver does not elevate itself. The Sound input list exposes one iPhone microphone source. Quit is available in the app menu or with Command-Q; closing the window preserves the connection.

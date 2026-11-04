@@ -6,6 +6,8 @@ enum BLEWire {
     static let service="7647DA20-730B-49AA-AB58-7812CE562410"
     static let input="7647DA21-730B-49AA-AB58-7812CE562410"
     static let reply="7647DA22-730B-49AA-AB58-7812CE562410"
+    static let microphoneInput="7647DA23-730B-49AA-AB58-7812CE562410"
+    static let microphoneReply="7647DA24-730B-49AA-AB58-7812CE562410"
     static let reverseService="7647DA30-730B-49AA-AB58-7812CE562410"
     static let maxFrame=16384
     static func valid(_ events:[[String:Any]])->Bool {

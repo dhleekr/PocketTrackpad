@@ -300,3 +300,24 @@
 "Finish the existing Mac recording before starting the iPhone microphone." = "Mac에서 진행 중인 녹음을 끝낸 뒤 아이폰 마이크를 시작하세요.";
 "Use the arrow to show or hide controls. Your choice is saved." = "화살표를 눌러 버튼을 펼치거나 접으세요. 선택한 상태는 저장됩니다.";
 "Hide controls" = "버튼 접기";
+
+"Starting Mac microphone…" = "Mac 마이크 시작 중…";
+
+"Stopping Mac microphone…" = "Mac 마이크 종료 중…";
+
+"Microphone active" = "마이크 사용 중";
+
+"Connect a dictation shortcut in the Mac app first." = "Mac 앱에서 받아쓰기 단축키를 먼저 연결하세요.";
+
+"Update the Mac receiver to 1.4.5 or later for safe dictation setup." = "안전한 받아쓰기 연결을 위해 Mac 수신 앱을 1.4.5 이상으로 업데이트하세요.";
+
+"Click the connected app’s input window on your Mac before starting the microphone." = "Mac에서 연결한 앱의 입력창을 선택한 뒤 마이크를 시작하세요.";
+
+"Retry stopping" = "종료 다시 시도";
+"Microphone for your Mac" = "Mac용 마이크";
+"Focus the connected app’s input on your Mac. Tap the iPhone microphone to start, and again to stop. The trackpad stays available." = "Mac에서 연결한 앱의 입력 창을 선택하세요. 아이폰 마이크를 누르면 시작하고 다시 누르면 종료합니다. 트랙패드도 함께 사용할 수 있습니다.";
+"In Mac Settings, install the iPhone microphone once. The standard macOS Installer asks for administrator approval." = "Mac 설정에서 아이폰 마이크를 최초 설치하세요. 표준 macOS 설치 프로그램이 관리자 승인을 요청합니다.";
+"Audio follows your selected connection: Wi-Fi or Bluetooth. Update both apps to 1.4.6 or later for Bluetooth audio." = "음성도 선택한 Wi-Fi 또는 Bluetooth 연결로 전달됩니다. Bluetooth 음성은 양쪽 앱 1.4.6 이상이 필요합니다.";
+"The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings." = "종료가 확인될 때까지 정지 버튼을 사용할 수 있습니다. 마이크 오류는 설정에서만 표시합니다.";
+"The microphone connection was lost. Reconnect the selected transport." = "마이크 연결이 끊겼습니다. 선택한 연결 방식으로 다시 연결하세요.";
+"Update the Mac receiver to 1.4.6 or later for microphone control." = "마이크를 사용하려면 Mac 수신 앱을 1.4.6 이상으로 업데이트하세요.";

@@ -3,7 +3,7 @@ import Cocoa
 import CoreAudio
 
 /// A fixed command adapter, not a general-purpose keyboard or settings editor.
-/// File transforms are tested against fixtures; this runs only after a phone mic request.
+/// Existing bindings are read only after a phone mic request; no settings are written.
 enum GPTDictationBinding {
     static let command="globalDictationHold"
     enum Failure:Error {case malformed,conflict,changed,unsafePath,restartRequired}
@@ -13,7 +13,8 @@ enum GPTDictationBinding {
             let parts=text.lowercased().split(separator:"+").map{String($0).trimmingCharacters(in:.whitespaces)}
             guard let last=parts.last,parts.count>1 else{return nil}
             let codes:[String:UInt16]=["a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,"b":11,"q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"1":18,"2":19,"3":20,"4":21,"6":22,"5":23,"9":25,"7":26,"8":28,"0":29,"o":31,"u":32,"i":34,"p":35,"l":37,"j":38,"k":40,"n":45,"m":46,"f13":105,"f14":107,"f15":113,"f16":106,"f17":64,"f18":79,"f19":80,"f20":90]
-            guard let key=codes[last] else{return nil}
+            let special:[String:UInt16]=["space":49,"spacebar":49,"return":36,"enter":36,"tab":48,"escape":53,"esc":53,"backspace":51,"delete":51,"left":123,"right":124,"down":125,"up":126,"f1":122,"f2":120,"f3":99,"f4":118,"f5":96,"f6":97,"f7":98,"f8":100,"f9":101,"f10":109,"f11":103,"f12":111]
+            guard let key=codes[last] ?? special[last] else{return nil}
             var flags:UInt64=0
             for modifier in parts.dropLast(){
                 switch modifier {
@@ -28,53 +29,64 @@ enum GPTDictationBinding {
             return Shortcut(key:key,flags:flags)
         }
     }
-    struct Plan {let shortcut:Shortcut;let replacement:Data?}
-    static func plan(_ original:Data?)throws->Plan {
-        var bindings=[[String:Any]]()
-        if let original {
-            guard original.count<=1_048_576,let array=try? JSONSerialization.jsonObject(with:original) as? [[String:Any]] else{throw Failure.malformed}
-            bindings=array
-        }
-        guard !bindings.contains(where:{($0["command"] as? String)=="-"+command}) else{throw Failure.conflict}
-        let existing=bindings.filter{($0["command"] as? String)==command}
-        if !existing.isEmpty {
-            // Never undo an explicit unbinding, conditional shortcut, or unusual custom key.
-            guard let binding=existing.last,binding["when"]==nil,let key=binding["key"] as? String,let shortcut=Shortcut.parse(key) else{throw Failure.conflict}
-            guard !bindings.contains(where:{($0["command"] as? String) != command && ($0["key"] as? String).flatMap(Shortcut.parse)==shortcut}) else{throw Failure.conflict}
-            return Plan(shortcut:shortcut,replacement:nil)
-        }
-        guard !bindings.contains(where:{($0["command"] as? String)=="-"+command}) else{throw Failure.conflict}
-        for key in ["Ctrl+Command+Alt+H","Ctrl+Command+Alt+F18","Ctrl+Command+Alt+F19","Ctrl+Command+Alt+F20"] {
-            let shortcut=Shortcut.parse(key)!
-            guard !bindings.contains(where:{($0["key"] as? String).flatMap(Shortcut.parse)==shortcut}) else{continue}
-            bindings.append(["command":command,"key":key])
-            return Plan(shortcut:shortcut,replacement:try JSONSerialization.data(withJSONObject:bindings,options:[.prettyPrinted,.sortedKeys]))
-        }
-        throw Failure.conflict
+    /// Read-only compatibility fallback. Never create or edit another app's settings.
+    static func existing(in original:Data?)->Shortcut? {
+        guard let original,original.count<=1_048_576,
+              let bindings=try? JSONSerialization.jsonObject(with:original) as? [[String:Any]],
+              !bindings.contains(where:{($0["command"] as? String)=="-"+command}),
+              let binding=bindings.last(where:{($0["command"] as? String)==command}),
+              binding["when"]==nil,let key=binding["key"] as? String,let shortcut=Shortcut.parse(key),
+              !bindings.contains(where:{($0["command"] as? String) != command && ($0["key"] as? String).flatMap(Shortcut.parse)==shortcut}) else{return nil}
+        return shortcut
     }
-    /// Preserve all existing entries and an exact backup. Never touch app databases or conversations.
-    static func register(at url:URL,processIdentity:String,defaults:UserDefaults)throws->Shortcut {
-        let fm=FileManager.default,marker="microphone.dictationBindingProcess"
-        if (try? url.resourceValues(forKeys:[.isSymbolicLinkKey]).isSymbolicLink)==true{throw Failure.unsafePath}
-        let original:Data?
-        if fm.fileExists(atPath:url.path){original=try Data(contentsOf:url)}else{original=nil}
-        let plan=try plan(original)
-        if let replacement=plan.replacement {
-            try fm.createDirectory(at:url.deletingLastPathComponent(),withIntermediateDirectories:true)
-            let current=fm.fileExists(atPath:url.path) ? try Data(contentsOf:url):nil
-            guard current==original else{throw Failure.changed}
-            if let original {
-                let backup=url.deletingLastPathComponent().appendingPathComponent("keybindings.pockettrackpad-"+UUID().uuidString+".backup")
-                try original.write(to:backup,options:.withoutOverwriting)
-                try fm.setAttributes([.posixPermissions:0o600],ofItemAtPath:backup.path)
-            }
-            try replacement.write(to:url,options:.atomic)
-            try fm.setAttributes([.posixPermissions:0o600],ofItemAtPath:url.path)
-            defaults.set(processIdentity,forKey:marker)
-            throw Failure.restartRequired
-        }
-        guard defaults.string(forKey:marker) != processIdentity else{throw Failure.restartRequired}
-        return plan.shortcut
+
+}
+
+/// Only PocketTrackpad preferences are changed by this explicit setup.
+enum DictationProfiles {
+    static let codexSettingsOrigin="codex-settings"
+    enum Mode:String,Codable {case hold,toggle}
+    struct Profile:Codable,Equatable {let key:UInt16;let flags:UInt64;let mode:Mode;var origin:String?=nil}
+    static let preferenceKey="microphone.appShortcuts.v1"
+    static func load(bundle:String,defaults:UserDefaults = .standard)->Profile? {
+        guard let data=defaults.data(forKey:preferenceKey),let profiles=try? JSONDecoder().decode([String:Profile].self,from:data),let value=profiles[bundle],value.key<128,value.flags & (CGEventFlags.maskControl.rawValue|CGEventFlags.maskAlternate.rawValue|CGEventFlags.maskCommand.rawValue) != 0 else{return nil}
+        return value
+    }
+    static func configuredBundles(defaults:UserDefaults = .standard)->[String] {
+        guard let data=defaults.data(forKey:preferenceKey),let profiles=try? JSONDecoder().decode([String:Profile].self,from:data) else{return []}
+        return profiles.filter{$0.value.origin=="auto" || $0.value.origin==codexSettingsOrigin}.map{ $0.key }
+    }
+    static func save(_ profile:Profile?,bundle:String,defaults:UserDefaults = .standard){
+        var profiles=(defaults.data(forKey:preferenceKey).flatMap{try? JSONDecoder().decode([String:Profile].self,from:$0)}) ?? [:]
+        profiles[bundle]=profile
+        if let data=try? JSONEncoder().encode(profiles){defaults.set(data,forKey:preferenceKey)}
+    }
+    static func display(_ profile:Profile)->String {
+        let flags=CGEventFlags(rawValue:profile.flags)
+        var text=""
+        if flags.contains(.maskControl){text+="⌃"};if flags.contains(.maskAlternate){text+="⌥"}
+        if flags.contains(.maskShift){text+="⇧"};if flags.contains(.maskCommand){text+="⌘"}
+        let names:[UInt16:String]=[0:"A",1:"S",2:"D",3:"F",4:"H",5:"G",6:"Z",7:"X",8:"C",9:"V",11:"B",12:"Q",13:"W",14:"E",15:"R",16:"Y",17:"T",18:"1",19:"2",20:"3",21:"4",22:"6",23:"5",24:"=",25:"9",26:"7",27:"−",28:"8",29:"0",30:"]",31:"O",32:"U",33:"[",34:"I",35:"P",36:"↩",37:"L",38:"J",40:"K",45:"N",46:"M",48:"⇥",49:"Space",51:"⌫",53:"Esc",105:"F13",107:"F14",113:"F15",106:"F16",64:"F17",79:"F18",80:"F19",90:"F20"]
+        let extra:[UInt16:String]=[122:"F1",120:"F2",99:"F3",118:"F4",96:"F5",97:"F6",98:"F7",100:"F8",101:"F9",109:"F10",103:"F11",111:"F12",123:"←",124:"→",125:"↓",126:"↑"]
+        return text+(names[profile.key] ?? extra[profile.key] ?? "Key \(profile.key)")
+    }
+}
+
+/// Codex stores its global dictation shortcut separately from command overrides.
+/// Decode this single preference only. Never read overrides as the live setting,
+/// modify target preferences, or log any other state from this file.
+enum CodexDictationPreference {
+    private struct Settings:Decodable {let globalDictationHotkey:String?}
+    static var url:URL {FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/.codex-global-state.json")}
+    static func profile(data:Data)->DictationProfiles.Profile? {
+        guard data.count<=16_777_216,let settings=try? JSONDecoder().decode(Settings.self,from:data),
+              let text=settings.globalDictationHotkey,let shortcut=GPTDictationBinding.Shortcut.parse(text) else{return nil}
+        return .init(key:shortcut.key,flags:shortcut.flags,mode:.hold,origin:DictationProfiles.codexSettingsOrigin)
+    }
+    static func read(at url:URL=Self.url)->DictationProfiles.Profile? {
+        guard let values=try? url.resourceValues(forKeys:[.isRegularFileKey,.fileSizeKey]),values.isRegularFile==true,
+              let size=values.fileSize,size<=16_777_216,let data=try? Data(contentsOf:url,options:.mappedIfSafe) else{return nil}
+        return profile(data:data)
     }
 }
 
@@ -115,20 +127,25 @@ enum GPTDictationBinding {
     let shortcut:GPTDictationBinding.Shortcut
     private let post:(Bool)throws->Void
     private let capture:()->Bool?
+    private let activity:()->Bool?
     private(set) var held=false
     private var confirmed=false
+    private let mode:DictationProfiles.Mode
+    private let prepareStop:()async throws->Void
+    private var toggleStarted=false,toggleStopSent=false
     private let startTimeout:TimeInterval,stopTimeout:TimeInterval
     private var pressedAt:Double?
     private var inactiveSince:Double?
-    init(shortcut:GPTDictationBinding.Shortcut,post:@escaping (Bool)throws->Void,capture:@escaping ()->Bool?,startTimeout:TimeInterval=8,stopTimeout:TimeInterval=10){self.shortcut=shortcut;self.post=post;self.capture=capture;self.startTimeout=startTimeout;self.stopTimeout=stopTimeout}
+    init(shortcut:GPTDictationBinding.Shortcut,post:@escaping (Bool)throws->Void,capture:@escaping ()->Bool?,mode:DictationProfiles.Mode = .hold,activity:(()->Bool?)?=nil,prepareStop:@escaping ()async throws->Void={},startTimeout:TimeInterval=8,stopTimeout:TimeInterval=10){self.shortcut=shortcut;self.mode=mode;self.post=post;self.capture=capture;self.activity=activity ?? capture;self.prepareStop=prepareStop;self.startTimeout=startTimeout;self.stopTimeout=stopTimeout}
     func start()async throws {
-        guard !held,!confirmed,capture()==false else{throw GPTMicrophoneControl.Failure.notConfirmed}
+        guard !held,!confirmed,!toggleStarted,activity()==false else{throw GPTMicrophoneControl.Failure.notConfirmed}
         held=true
         do {
             try post(true);pressedAt=ProcessInfo.processInfo.systemUptime
+            if mode == .toggle{try post(false);held=false;toggleStarted=true}
             let deadline=ProcessInfo.processInfo.systemUptime+startTimeout
             while ProcessInfo.processInfo.systemUptime<deadline {
-                guard held else{throw CancellationError()}
+                guard held || toggleStarted else{throw CancellationError()}
                 if capture()==true{confirmed=true;return}
                 try await Task.sleep(for:.milliseconds(100))
             }
@@ -138,13 +155,16 @@ enum GPTDictationBinding {
 
     private func release()throws {if held{try post(false);held=false}}
     func hasFinished()->Bool {
-        guard confirmed,capture()==false else{inactiveSince=nil;return false}
+        guard confirmed,activity()==false else{inactiveSince=nil;return false}
         let now=ProcessInfo.processInfo.systemUptime
         if inactiveSince==nil{inactiveSince=now;return false}
         guard now-inactiveSince!>=0.5 else{return false}
         do{try release();return true}catch{return false}
     }
     func stop()async->Bool {
+        if mode == .toggle,toggleStarted,!toggleStopSent,activity()==true {
+            do{try await prepareStop();try post(true);try post(false);toggleStopSent=true}catch{try? post(false);return false}
+        }
         if held,let pressedAt {
             let remaining=0.45-(ProcessInfo.processInfo.systemUptime-pressedAt)
             if remaining>0{try? await Task.sleep(for:.seconds(remaining))}
@@ -154,7 +174,7 @@ enum GPTDictationBinding {
         var inactiveStart:Double?
         repeat {
             let now=ProcessInfo.processInfo.systemUptime
-            if capture()==false {
+            if activity()==false {
                 if inactiveStart==nil{inactiveStart=now}
                 if now-inactiveStart!>=0.5{return true}
             }else{inactiveStart=nil}

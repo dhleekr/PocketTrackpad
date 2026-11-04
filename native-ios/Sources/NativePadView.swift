@@ -134,15 +134,12 @@ final class PadController:UIViewController {
     private let settingsButton=UIButton(type:.system)
     private var controlTop:NSLayoutConstraint!
     private let quickKeys=UIStackView()
-    private let voiceStatus=UILabel()
     private let revealButton=UIButton(type:.system)
     private var revealingControls=false
     private var controlsCollapsed=UserDefaults.standard.bool(forKey:"pad.controlsCollapsed") {didSet{UserDefaults.standard.set(controlsCollapsed,forKey:"pad.controlsCollapsed")}}
     private var chromeDismiss:DispatchWorkItem?
     private var keyRowWidth:NSLayoutConstraint!
     private var rowWidth:NSLayoutConstraint!
-    private var toastDismiss:DispatchWorkItem?
-    private var lastVoiceNotice:String?
 
     private var keyButtons=[UIButton]()
     private var controlTrailing:NSLayoutConstraint!
@@ -236,13 +233,6 @@ final class PadController:UIViewController {
         view.addSubview(revealButton)
         NSLayoutConstraint.activate([revealButton.leadingAnchor.constraint(equalTo:view.safeAreaLayoutGuide.leadingAnchor,constant:8),revealButton.topAnchor.constraint(equalTo:controls.topAnchor),revealButton.widthAnchor.constraint(equalToConstant:44),revealButton.heightAnchor.constraint(equalToConstant:44)])
         client.$showQuickKeys.combineLatest(client.$showTopControls,client.$showMicrophone).sink{[weak self] _ in DispatchQueue.main.async{self?.updateVisibility()}}.store(in:&subscriptions)
-        voiceStatus.translatesAutoresizingMaskIntoConstraints=false
-        voiceStatus.textColor=UIColor(white:0.8,alpha:1);voiceStatus.font = .preferredFont(forTextStyle:.caption1)
-        voiceStatus.adjustsFontForContentSizeCategory=true;voiceStatus.adjustsFontSizeToFitWidth=true;voiceStatus.minimumScaleFactor=0.85
-        voiceStatus.numberOfLines=3;voiceStatus.textAlignment = .center;voiceStatus.accessibilityTraits = .updatesFrequently
-        voiceStatus.backgroundColor=UIColor(white:0.14,alpha:0.96);voiceStatus.layer.cornerRadius=12;voiceStatus.clipsToBounds=true
-        view.addSubview(voiceStatus)
-        NSLayoutConstraint.activate([voiceStatus.centerXAnchor.constraint(equalTo:view.safeAreaLayoutGuide.centerXAnchor),voiceStatus.widthAnchor.constraint(lessThanOrEqualTo:view.safeAreaLayoutGuide.widthAnchor,constant:-40),voiceStatus.widthAnchor.constraint(lessThanOrEqualToConstant:340),voiceStatus.bottomAnchor.constraint(equalTo:quickKeys.topAnchor,constant:-12)])
         client.$quickKeys.sink{[weak self] keys in
             guard let self else{return}
             for (index,button) in self.keyButtons.enumerated(){let key=keys[index];self.configureKey(button,key:key)}
@@ -308,28 +298,14 @@ final class PadController:UIViewController {
     }
     private func updateVoice(){
         let speech=client.speech
-        if speech.busy || speech.error != nil {
-            showVoiceNotice(speech.status)
-        }else{voiceStatus.isHidden=true;lastVoiceNotice=nil;toastDismiss?.cancel()}
         updateVisibility()
-        microphoneButton.setImage(UIImage(systemName:speech.recording ? "stop.fill":speech.preparing || speech.finishing || speech.sending ? "ellipsis":"mic"),for:.normal)
+        microphoneButton.setImage(UIImage(systemName:speech.recording || speech.finishing ? "stop.fill":speech.preparing || speech.sending ? "ellipsis":speech.error != nil ? "exclamationmark.circle":"mic"),for:.normal)
         microphoneButton.backgroundColor=speech.recording ? UIColor(red:0.79,green:0.96,blue:0.36,alpha:1):UIColor(white:0.18,alpha:1)
         microphoneButton.tintColor=speech.recording ? UIColor(white:0.08,alpha:1):UIColor(white:0.9,alpha:1)
-        microphoneButton.accessibilityLabel=PTText(speech.recording ? "Stop recording":speech.preparing ? "Cancel":"Start recording")
-        microphoneButton.isEnabled = !speech.finishing && !speech.sending || speech.recording
+        microphoneButton.accessibilityLabel=PTText(speech.finishing ? "Retry stopping":speech.recording ? "Stop recording":speech.preparing ? "Cancel":"Start recording")
+        microphoneButton.accessibilityValue=speech.status
+        microphoneButton.isEnabled = !speech.sending || speech.recording || speech.finishing
         microphoneButton.alpha=microphoneButton.isEnabled ? 1:0.5
-    }
-    private func showVoiceNotice(_ message:String){
-        guard lastVoiceNotice != message else{return}
-        lastVoiceNotice=message;toastDismiss?.cancel()
-        voiceStatus.text="  "+message+"  ";voiceStatus.isHidden=false;voiceStatus.alpha=1
-        UIAccessibility.post(notification:.announcement,argument:message)
-        let dismiss=DispatchWorkItem{[weak self] in
-            guard let self else{return}
-            UIView.animate(withDuration:UIAccessibility.isReduceMotionEnabled ? 0:0.18,animations:{self.voiceStatus.alpha=0}){_ in self.voiceStatus.isHidden=true}
-        }
-        toastDismiss=dismiss
-        DispatchQueue.main.asyncAfter(deadline:.now()+(UIAccessibility.isVoiceOverRunning ? 8:4),execute:dismiss)
     }
     private func updateVisibility(){
         guard isViewLoaded else{return}
@@ -418,11 +394,8 @@ final class PadController:UIViewController {
         toggleControls();view.layoutIfNeeded()
         report["temporarilyRestored"] = !controls.isHidden && !quickKeys.isHidden && keyButtons.allSatisfy{!$0.isHidden}
         toggleControls();report["hiddenAgain"]=controls.isHidden && quickKeys.isHidden
-        showVoiceNotice(PTText("Could not start the Mac microphone."))
-        report["toastAppeared"] = !voiceStatus.isHidden
         DispatchQueue.main.asyncAfter(deadline:.now()+4.5){[weak self] in
             guard let self else{return}
-            report["toastDismissed"]=self.voiceStatus.isHidden
             self.client.showQuickKeys=saved.0;self.client.showTopControls=saved.1;self.client.showMicrophone=saved.2;self.updateVisibility()
             if let data=try? JSONSerialization.data(withJSONObject:report,options:.sortedKeys){try? data.write(to:FileManager.default.temporaryDirectory.appendingPathComponent("PocketTrackpad-VisibilityQA.json"),options:.atomic)}
         }

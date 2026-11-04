@@ -73,3 +73,130 @@
 "Microphone installer unavailable" = "마이크 설치 프로그램을 찾을 수 없습니다";
 
 "Download the latest Mac app from the PocketTrackpad website and try again." = "PocketTrackpad 홈페이지에서 최신 Mac 앱을 다운로드한 뒤 다시 시도하세요.";
+
+"App" = "앱";
+
+"ChatGPT (classic)" = "ChatGPT (기존 앱)";
+
+"ChatGPT / Codex" = "ChatGPT / Codex";
+
+"Choose how the shortcut works in that app. Keep its input window focused when using the iPhone microphone. Messages are never sent automatically." = "대상 앱의 단축키 동작 방식을 선택하세요. 아이폰 마이크 사용 시 해당 앱의 입력창을 선택해 두세요. 메시지는 자동 전송하지 않습니다.";
+
+"Claude Desktop · not yet verified" = "Claude Desktop · 검증 전";
+
+"Click to record shortcut" = "눌러서 단축키 기록";
+
+"Connect a dictation shortcut in the Mac app first." = "Mac 앱에서 받아쓰기 단축키를 먼저 연결하세요.";
+
+"Connect dictation" = "받아쓰기 연결";
+
+"Connect dictation…" = "받아쓰기 연결…";
+
+"Dictation shortcut" = "받아쓰기 단축키";
+
+"Hold to dictate" = "누르는 동안 받아쓰기";
+
+"No readable shortcut detected · record it above" = "읽을 수 있는 단축키 없음 · 위에서 기록하세요";
+
+"One setup for each app. PocketTrackpad never edits the other app’s settings." = "앱마다 한 번 연결합니다. 다른 앱의 설정은 수정하지 않습니다.";
+
+"Press once to start / again to stop" = "한 번 눌러 시작 · 다시 눌러 종료";
+
+"Press your dictation shortcut…" = "받아쓰기 단축키를 눌러주세요…";
+
+"Remove connection" = "연결 해제";
+
+"Save" = "저장";
+
+"Use detected shortcut" = "찾은 단축키 사용";
+
+"Use ⌘, ⌥ or ⌃ with a key" = "⌘, ⌥ 또는 ⌃와 키를 함께 눌러주세요";
+
+"Choose an app. Its existing dictation shortcut is detected automatically." = "앱을 선택하면 기존 받아쓰기 단축키를 자동으로 확인합니다.";
+
+"Connect automatically" = "자동 연결";
+
+"Read shortcut again" = "단축키 다시 읽기";
+
+"Checking the app’s dictation shortcut…" = "앱의 받아쓰기 단축키를 확인 중…";
+
+"Opening the selected app’s settings. Only the dictation shortcut is read; no settings are changed." = "선택한 앱의 설정을 엽니다. 받아쓰기 단축키만 읽으며 설정은 변경하지 않습니다.";
+
+"Shortcut linked. Close the target app’s settings and click its input window before using the iPhone microphone." = "단축키를 연결했습니다. 대상 앱의 설정을 닫고 입력창을 선택한 뒤 아이폰 마이크를 사용하세요.";
+
+"Enable Mac control first, then try again." = "컴퓨터 제어 권한을 먼저 허용한 뒤 다시 시도하세요.";
+
+"Install the selected app first, then try again." = "선택한 앱을 먼저 설치한 뒤 다시 시도하세요.";
+
+"The app did not expose its settings. Open its dictation settings, then read again." = "앱의 설정 화면을 확인하지 못했습니다. 받아쓰기 설정을 연 뒤 다시 읽어주세요.";
+
+"No assigned dictation shortcut was found. Enable a custom shortcut in the open app, then read again." = "지정된 받아쓰기 단축키를 찾지 못했습니다. 열린 앱에서 사용자 지정 단축키를 켠 뒤 다시 읽어주세요.";
+
+"Manual options…" = "직접 설정…";
+
+"Not connected yet" = "아직 연결 안 됨";
+
+"Connected" = "연결됨";
+
+"Saved · not checked" = "저장됨 · 확인 전";
+
+"Click Connect automatically to open the app and read its dictation shortcut. If none is enabled, set it there, then read again. No need to copy keys here." = "자동 연결을 누르면 대상 앱의 받아쓰기 단축키를 확인합니다. 꺼져 있으면 해당 앱에서 지정한 뒤 다시 읽어주세요. 키를 복사해 적을 필요는 없습니다.";
+
+"The dictation shortcut editor is open. Set a shortcut there, then click Read shortcut again." = "받아쓰기 단축키 입력창을 열었습니다. 해당 앱에서 키를 지정한 뒤 다시 읽기를 누르세요.";
+
+"Finish dictation setup" = "받아쓰기 연결 마무리";
+
+"Set the shortcut in the open app. Then read it automatically here." = "열린 앱에서 단축키를 지정하세요. 완료하면 여기서 자동으로 다시 읽습니다.";
+
+"Enable Mac control…" = "컴퓨터 제어 허용…";
+
+"Enable Mac control to connect dictation" = "받아쓰기 연결을 위해 컴퓨터 제어를 허용하세요";
+
+"Mac control and microphone ready" = "컴퓨터 제어·마이크 준비 완료";
+
+"Install the optional microphone to continue" = "계속하려면 선택 사항인 가상 마이크를 설치하세요";
+
+"Install microphone…" = "마이크 설치…";
+
+"Automatic dictation needs macOS 14.2 or later. Trackpad control is still available." = "자동 받아쓰기는 macOS 14.2 이상이 필요합니다. 트랙패드 조작은 사용할 수 있습니다.";
+
+"Settings" = "설정";
+"Settings…" = "설정…";
+"This Mac" = "이 Mac";
+"Mac control" = "Mac 제어";
+"iPhone microphone" = "아이폰 마이크";
+"Allow…" = "허용…";
+"Install…" = "설치…";
+"Manage…" = "관리…";
+"Enabled" = "허용됨";
+"Permission needed" = "권한이 필요합니다";
+"Installed" = "설치됨";
+"Optional for voice input" = "음성 입력에 필요합니다";
+"Dictation" = "받아쓰기";
+"Dictation app" = "받아쓰기 대상 앱";
+"Connect" = "연결";
+"Check again" = "다시 확인";
+"Connecting…" = "연결 중…";
+"Saved shortcut" = "저장된 단축키";
+"Not connected" = "연결 안 됨";
+"Manual connection…" = "수동 연결…";
+"Hide manual connection" = "수동 연결 접기";
+"Disconnect app" = "앱 연결 해제";
+"Reads the app’s dictation shortcut and follows changes automatically." = "앱의 받아쓰기 단축키를 읽고 변경 사항을 자동으로 반영합니다.";
+"Ready. Click the app’s input, then use the iPhone microphone." = "연결됐습니다. 대상 앱의 입력 창을 클릭하고 아이폰 마이크를 사용하세요.";
+"Dictation needs macOS 14.2 or later" = "받아쓰기는 macOS 14.2 이상이 필요합니다";
+"Claude Desktop" = "Claude Desktop";
+
+"Dictation needs attention" = "받아쓰기 설정을 확인하세요";
+"Open Settings to check the app’s shortcut." = "설정에서 대상 앱의 단축키를 확인하세요.";
+"Open Settings" = "설정 열기";
+"Dismiss" = "닫기";
+"Checking the app’s dictation settings…" = "앱의 받아쓰기 설정을 확인하고 있습니다…";
+"Set a shortcut in the app, then click Check again." = "대상 앱에서 단축키를 지정하고 다시 확인을 누르세요.";
+"No shortcut found. Set one in the app, then check again." = "단축키가 없습니다. 대상 앱에서 지정한 뒤 다시 확인하세요.";
+
+"Set a dictation shortcut" = "받아쓰기 단축키를 지정하세요";
+"Choose a shortcut in the app, then check again." = "대상 앱에서 단축키를 지정한 뒤 다시 확인하세요.";
+
+"Check" = "확인";
+"Both apps stay connected. The microphone follows the app you’re typing in." = "두 앱을 함께 연결해 두세요. 입력 중인 앱에서 마이크가 동작합니다.";

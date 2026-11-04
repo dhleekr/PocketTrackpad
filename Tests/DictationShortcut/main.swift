@@ -1,34 +1,22 @@
 import Foundation
+import CoreGraphics
 
 @MainActor func run()async throws {
  func data(_ value:Any)throws->Data{try JSONSerialization.data(withJSONObject:value)}
- let existing:[[String:Any]]=[["command":"unrelated","key":"Ctrl+Command+Alt+H","custom":true]]
- let plan=try GPTDictationBinding.plan(data(existing))
- let merged=try JSONSerialization.jsonObject(with:plan.replacement!) as! [[String:Any]]
- assert(merged.count==2 && merged[0]["custom"] as? Bool==true && merged[1]["key"] as? String=="Ctrl+Command+Alt+F18")
- let repeatedPlan=try GPTDictationBinding.plan(plan.replacement);assert(repeatedPlan.replacement==nil)
  let custom=try data([["command":"globalDictationHold","key":"Control+Option+Command+D"]])
- let customPlan=try GPTDictationBinding.plan(custom);assert(customPlan.shortcut.key==2)
- for input in [Data("{broken".utf8),try data(["not-an-array":true])]{do{_ = try GPTDictationBinding.plan(input);assertionFailure()}catch{}}
- for entry:[String:Any] in [["command":"globalDictationHold","key":NSNull()],["command":"-globalDictationHold","key":"Ctrl+H"],["command":"globalDictationHold","key":"Ctrl+H","when":"composerFocus"]] {
-  do{_ = try GPTDictationBinding.plan(data([entry]));assertionFailure()}catch{}
- }
- let folder=FileManager.default.temporaryDirectory.appendingPathComponent("PocketTrackpadBindingTest-"+UUID().uuidString)
- try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
- defer{try? FileManager.default.removeItem(at:folder)}
- let suite="PocketTrackpadBindingTest-"+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!
+ assert(GPTDictationBinding.existing(in:custom)?.key==2)
+ for input in [nil,Data("{broken".utf8),try data(["not-an-array":true]),try data([["command":"unrelated","key":"Ctrl+H"]])]{assert(GPTDictationBinding.existing(in:input)==nil)}
+ for entry:[String:Any] in [["command":"globalDictationHold","key":NSNull()],["command":"-globalDictationHold","key":"Ctrl+H"],["command":"globalDictationHold","key":"Ctrl+H","when":"composerFocus"]]{let input=try data([entry]);assert(GPTDictationBinding.existing(in:input)==nil)}
+ print("PASS read-only fallback; missing, malformed, disabled and conditional mappings never require registration")
+ let suite="PocketTrackpadProfileTest-"+UUID().uuidString,defaults=UserDefaults(suiteName:suite)!
  defer{defaults.removePersistentDomain(forName:suite)}
- let url=folder.appendingPathComponent("keybindings.json"),original=try data(existing)
- try original.write(to:url)
- do{_ = try GPTDictationBinding.register(at:url,processIdentity:"old",defaults:defaults);assertionFailure()}catch GPTDictationBinding.Failure.restartRequired{}
- let backups=try FileManager.default.contentsOfDirectory(at:folder,includingPropertiesForKeys:nil).filter{$0.pathExtension=="backup"}
- assert(backups.count==1);let backupData=try Data(contentsOf:backups[0]);assert(backupData==original)
- do{_ = try GPTDictationBinding.register(at:url,processIdentity:"old",defaults:defaults);assertionFailure()}catch GPTDictationBinding.Failure.restartRequired{}
- _ = try GPTDictationBinding.register(at:url,processIdentity:"new",defaults:defaults)
- let fileCount=try FileManager.default.contentsOfDirectory(at:folder,includingPropertiesForKeys:nil).count;assert(fileCount==2)
- let alias=folder.appendingPathComponent("alias.json");try FileManager.default.createSymbolicLink(at:alias,withDestinationURL:url)
- do{_ = try GPTDictationBinding.register(at:alias,processIdentity:"new",defaults:defaults);assertionFailure()}catch GPTDictationBinding.Failure.unsafePath{}
- print("PASS preserve custom shortcuts, avoid collisions, reject malformed/disabled/conditional bindings, exact backup, idempotence, restart gate, and symlink refusal")
+ let profile=DictationProfiles.Profile(key:4,flags:CGEventFlags.maskControl.rawValue|CGEventFlags.maskCommand.rawValue,mode:.toggle)
+ DictationProfiles.save(profile,bundle:"test.app",defaults:defaults)
+ assert(DictationProfiles.load(bundle:"test.app",defaults:defaults)==profile)
+ assert(DictationProfiles.load(bundle:"another.app",defaults:defaults)==nil)
+ DictationProfiles.save(nil,bundle:"test.app",defaults:defaults)
+ assert(DictationProfiles.load(bundle:"test.app",defaults:defaults)==nil)
+ print("PASS per-app user-owned shortcut profiles persist and remove without touching target settings")
  let shortcut=GPTDictationBinding.Shortcut.parse("Ctrl+Command+Alt+H")!
  var active:Bool?=false,events=[Bool]()
  let recording=GPTShortcutRecording(shortcut:shortcut,post:{down in events.append(down);active=down},capture:{active})
@@ -55,6 +43,25 @@ import Foundation
  let uncertainStop=GPTShortcutRecording(shortcut:shortcut,post:{down in uncertain=down ? true:nil},capture:{uncertain},stopTimeout:0.15)
  try await uncertainStop.start();let stoppedUncertain=await uncertainStop.stop()
  assert(!stoppedUncertain,"unknown stop state must not report success or restore room microphone")
+ var toggleActive:Bool?=false,toggleEvents=[Bool]()
+ let toggle=GPTShortcutRecording(shortcut:shortcut,post:{down in toggleEvents.append(down);if down{toggleActive = !(toggleActive ?? false)}},capture:{toggleActive},mode:.toggle)
+ try await toggle.start();assert(toggleEvents == [true,false])
+ let toggleStopped=await toggle.stop();assert(toggleStopped && toggleEvents == [true,false,true,false])
+ _ = await toggle.stop();assert(toggleEvents == [true,false,true,false],"a second stop must never restart toggle dictation")
+ var wrongDeviceActive:Bool?=false,wrongDeviceEvents=[Bool]()
+ let wrongDevice=GPTShortcutRecording(shortcut:shortcut,post:{down in wrongDeviceEvents.append(down);if down{wrongDeviceActive = !(wrongDeviceActive ?? false)}},capture:{false},mode:.toggle,activity:{wrongDeviceActive},startTimeout:0.1)
+ do{try await wrongDevice.start();assertionFailure()}catch{}
+ let cleaned=await wrongDevice.stop();assert(cleaned && wrongDeviceEvents == [true,false,true,false],"a target using another microphone must still be stopped after route confirmation fails")
+ print("PASS balanced toggle start/stop and no duplicate toggle on repeated stop")
+ var originalFocused=true,focusActive:Bool?=false,stopFocusCalls=0
+ let focusChanged=GPTShortcutRecording(shortcut:shortcut,post:{down in
+     if down && !originalFocused{throw GPTMicrophoneControl.Failure.openGPT}
+     if down{focusActive = !(focusActive ?? false)}
+ },capture:{focusActive},mode:.toggle,prepareStop:{originalFocused=true;stopFocusCalls+=1},stopTimeout:0.8)
+ try await focusChanged.start();originalFocused=false
+ let focusStopped=await focusChanged.stop()
+ guard focusStopped && stopFocusCalls==1 else{print("FAIL switching foreground apps prevents the original recording from stopping");exit(1)}
+ print("PASS stop returns to the original target after foreground focus changes")
  print("PASS capture-confirmed start, one key release, idempotent stop, existing-recording protection, and unknown-state refusal")
 }
 Task{@MainActor in do{try await run();exit(0)}catch{print("FAIL",error);exit(1)}}

@@ -19,7 +19,7 @@ for TASK_ARCH in arm64 x86_64; do
   clang -O2 -arch "$TASK_ARCH" -mmacosx-version-min=13.0 -fobjc-arc -c NativeMagnify.m -o "$TASK_BUILD/Magnify-$TASK_ARCH.o"
   clang -O2 -arch "$TASK_ARCH" -mmacosx-version-min=13.0 -c vendor/TouchSynthesis/TouchEvents.c -o "$TASK_BUILD/TouchEvents-$TASK_ARCH.o"
   clang -O2 -arch "$TASK_ARCH" -mmacosx-version-min=13.0 -c NativeDockSwipe.c -o "$TASK_BUILD/DockSwipe-$TASK_ARCH.o"
-  swiftc -O "${TASK_TEST_FLAGS[@]}" "${TASK_CAPTURE_OBJECT[@]}" -target "$TASK_ARCH-apple-macosx13.0" -module-cache-path "${TMPDIR:-/tmp}/pocket-trackpad-module-cache" Host.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift KeyRepeat.swift MacQuickKeys.swift MacSystemActions.swift ConnectionState.swift CursorBounds.swift native-ios/Sources/PadDiagnostics.swift NativeScroll.swift MotionPlayback.swift BLEHost.swift NativeWiFiHost.swift MacSupport.swift shared/BLEWire.swift shared/SecureLink.swift "$TASK_BUILD/Magnify-$TASK_ARCH.o" "$TASK_BUILD/TouchEvents-$TASK_ARCH.o" "$TASK_BUILD/DockSwipe-$TASK_ARCH.o" -o "$TASK_BUILD/PocketTrackpad-$TASK_ARCH" -framework CoreAudio -framework AudioToolbox -framework Cocoa -framework CoreVideo -framework ApplicationServices -framework CoreImage -framework CoreBluetooth -framework Network -framework Security
+  swiftc -O "${TASK_TEST_FLAGS[@]}" "${TASK_CAPTURE_OBJECT[@]}" -target "$TASK_ARCH-apple-macosx13.0" -module-cache-path "${TMPDIR:-/tmp}/pocket-trackpad-module-cache" Host.swift MacNotice.swift DictationSetup.swift DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift KeyRepeat.swift MacQuickKeys.swift MacSystemActions.swift ConnectionState.swift CursorBounds.swift native-ios/Sources/PadDiagnostics.swift NativeScroll.swift MotionPlayback.swift BLEHost.swift NativeWiFiHost.swift MacSupport.swift shared/BLEWire.swift shared/SecureLink.swift shared/MicrophoneWire.swift "$TASK_BUILD/Magnify-$TASK_ARCH.o" "$TASK_BUILD/TouchEvents-$TASK_ARCH.o" "$TASK_BUILD/DockSwipe-$TASK_ARCH.o" -o "$TASK_BUILD/PocketTrackpad-$TASK_ARCH" -framework CoreAudio -framework AudioToolbox -framework Cocoa -framework CoreVideo -framework ApplicationServices -framework CoreImage -framework CoreBluetooth -framework Network -framework Security
 done
 lipo -create "$TASK_BUILD/Microphone-arm64" "$TASK_BUILD/Microphone-x86_64" -output "$TASK_DRIVER/Contents/MacOS/PocketTrackpadMicrophone"
 cp virtual-microphone/Info.plist "$TASK_DRIVER/Contents/Info.plist"
@@ -40,11 +40,11 @@ done
 iconutil -c icns "$TASK_BUILD/AppIcon.iconset" -o "$TASK_APP/Contents/Resources/AppIcon.icns"
 if [[ -n "${POCKET_MAC_SIGN_IDENTITY:-}" ]]; then
   codesign --force --options runtime --timestamp --sign "$POCKET_MAC_SIGN_IDENTITY" "$TASK_DRIVER"
-  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg"
+  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg" "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$TASK_APP/Contents/Info.plist")"
   codesign --force --options runtime --timestamp --sign "$POCKET_MAC_SIGN_IDENTITY" "$TASK_APP"
 else
   codesign --force --sign - "$TASK_DRIVER"
-  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg"
+  virtual-microphone/build-installer.command "$TASK_DRIVER" "$TASK_APP/Contents/Resources/Microphone/PocketTrackpadMicrophone.pkg" "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$TASK_APP/Contents/Info.plist")"
   codesign --force --sign - "$TASK_APP"
   print 'LOCAL CANDIDATE ONLY: Developer ID signing and Apple notarization are still required.'
 fi

@@ -2,6 +2,13 @@ import Foundation
 import Network
 import Security
 
+@MainActor enum MicrophoneStopPriority {
+    static func send(sender:Task<Void,Never>?,command:()async throws->Void)async throws {
+        sender?.cancel()
+        try await command()
+    }
+}
+
 // Native TLS transport. The QR secret authenticates both ends before any input is accepted.
 enum PadSecureLink {
     static let maxFrame=16384

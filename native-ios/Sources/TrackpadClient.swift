@@ -99,7 +99,12 @@ import UIKit
     }
     func releaseInput(){endKey();send([PadEvent(type:"up")])}
     var continuousSystemGestures:Bool {transport == .wifi ? wifi.continuousSystemGestures:reverse.continuousSystemGestures}
-    var supportsRemoteMicrophone:Bool {transport == .wifi ? wifi.remoteMicrophone:reverse.remoteMicrophone}
+    var supportsRemoteMicrophone:Bool {transport == .wifi ? wifi.remoteMicrophone:reverse.bluetoothMicrophone}
+    func makeMicrophoneConnection()throws->any MicrophoneConnection {
+        if transport == .bluetooth{return try reverse.makeMicrophoneConnection()}
+        guard let endpoint=microphoneEndpoint else{throw PadSecureLink.Failure.closed}
+        return PadSecureConnection(host:endpoint.host,port:8767,token:endpoint.token)
+    }
     var microphoneEndpoint:PairingEndpoint? {guard let address=wifi.pairingAddress else{return nil};return try? PairingEndpoint(address)}
     private var pairingToken:String? {guard let address=wifi.pairingAddress else{return nil};return (try? PairingEndpoint(address))?.token}
     func selectTransport(){

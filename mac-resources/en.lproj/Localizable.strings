@@ -73,3 +73,130 @@
 "Microphone installer unavailable" = "Microphone installer unavailable";
 
 "Download the latest Mac app from the PocketTrackpad website and try again." = "Download the latest Mac app from the PocketTrackpad website and try again.";
+
+"App" = "App";
+
+"ChatGPT (classic)" = "ChatGPT (classic)";
+
+"ChatGPT / Codex" = "ChatGPT / Codex";
+
+"Choose how the shortcut works in that app. Keep its input window focused when using the iPhone microphone. Messages are never sent automatically." = "Choose how the shortcut works in that app. Keep its input window focused when using the iPhone microphone. Messages are never sent automatically.";
+
+"Claude Desktop · not yet verified" = "Claude Desktop · not yet verified";
+
+"Click to record shortcut" = "Click to record shortcut";
+
+"Connect a dictation shortcut in the Mac app first." = "Connect a dictation shortcut in the Mac app first.";
+
+"Connect dictation" = "Connect dictation";
+
+"Connect dictation…" = "Connect dictation…";
+
+"Dictation shortcut" = "Dictation shortcut";
+
+"Hold to dictate" = "Hold to dictate";
+
+"No readable shortcut detected · record it above" = "No readable shortcut detected · record it above";
+
+"One setup for each app. PocketTrackpad never edits the other app’s settings." = "One setup for each app. PocketTrackpad never edits the other app’s settings.";
+
+"Press once to start / again to stop" = "Press once to start / again to stop";
+
+"Press your dictation shortcut…" = "Press your dictation shortcut…";
+
+"Remove connection" = "Remove connection";
+
+"Save" = "Save";
+
+"Use detected shortcut" = "Use detected shortcut";
+
+"Use ⌘, ⌥ or ⌃ with a key" = "Use ⌘, ⌥ or ⌃ with a key";
+
+"Choose an app. Its existing dictation shortcut is detected automatically." = "Choose an app. Its existing dictation shortcut is detected automatically.";
+
+"Connect automatically" = "Connect automatically";
+
+"Read shortcut again" = "Read shortcut again";
+
+"Checking the app’s dictation shortcut…" = "Checking the app’s dictation shortcut…";
+
+"Opening the selected app’s settings. Only the dictation shortcut is read; no settings are changed." = "Opening the selected app’s settings. Only the dictation shortcut is read; no settings are changed.";
+
+"Shortcut linked. Close the target app’s settings and click its input window before using the iPhone microphone." = "Shortcut linked. Close the target app’s settings and click its input window before using the iPhone microphone.";
+
+"Enable Mac control first, then try again." = "Enable Mac control first, then try again.";
+
+"Install the selected app first, then try again." = "Install the selected app first, then try again.";
+
+"The app did not expose its settings. Open its dictation settings, then read again." = "The app did not expose its settings. Open its dictation settings, then read again.";
+
+"No assigned dictation shortcut was found. Enable a custom shortcut in the open app, then read again." = "No assigned dictation shortcut was found. Enable a custom shortcut in the open app, then read again.";
+
+"Manual options…" = "Manual options…";
+
+"Not connected yet" = "Not connected yet";
+
+"Connected" = "Connected";
+
+"Saved · not checked" = "Saved · not checked";
+
+"Click Connect automatically to open the app and read its dictation shortcut. If none is enabled, set it there, then read again. No need to copy keys here." = "Click Connect automatically to open the app and read its dictation shortcut. If none is enabled, set it there, then read again. No need to copy keys here.";
+
+"The dictation shortcut editor is open. Set a shortcut there, then click Read shortcut again." = "The dictation shortcut editor is open. Set a shortcut there, then click Read shortcut again.";
+
+"Finish dictation setup" = "Finish dictation setup";
+
+"Set the shortcut in the open app. Then read it automatically here." = "Set the shortcut in the open app. Then read it automatically here.";
+
+"Enable Mac control…" = "Enable Mac control…";
+
+"Enable Mac control to connect dictation" = "Enable Mac control to connect dictation";
+
+"Mac control and microphone ready" = "Mac control and microphone ready";
+
+"Install the optional microphone to continue" = "Install the optional microphone to continue";
+
+"Install microphone…" = "Install microphone…";
+
+"Automatic dictation needs macOS 14.2 or later. Trackpad control is still available." = "Automatic dictation needs macOS 14.2 or later. Trackpad control is still available.";
+
+"Settings" = "Settings";
+"Settings…" = "Settings…";
+"This Mac" = "This Mac";
+"Mac control" = "Mac control";
+"iPhone microphone" = "iPhone microphone";
+"Allow…" = "Allow…";
+"Install…" = "Install…";
+"Manage…" = "Manage…";
+"Enabled" = "Enabled";
+"Permission needed" = "Permission needed";
+"Installed" = "Installed";
+"Optional for voice input" = "Optional for voice input";
+"Dictation" = "Dictation";
+"Dictation app" = "Dictation app";
+"Connect" = "Connect";
+"Check again" = "Check again";
+"Connecting…" = "Connecting…";
+"Saved shortcut" = "Saved shortcut";
+"Not connected" = "Not connected";
+"Manual connection…" = "Manual connection…";
+"Hide manual connection" = "Hide manual connection";
+"Disconnect app" = "Disconnect app";
+"Reads the app’s dictation shortcut and follows changes automatically." = "Reads the app’s dictation shortcut and follows changes automatically.";
+"Ready. Click the app’s input, then use the iPhone microphone." = "Ready. Click the app’s input, then use the iPhone microphone.";
+"Dictation needs macOS 14.2 or later" = "Dictation needs macOS 14.2 or later";
+"Claude Desktop" = "Claude Desktop";
+
+"Dictation needs attention" = "Dictation needs attention";
+"Open Settings to check the app’s shortcut." = "Open Settings to check the app’s shortcut.";
+"Open Settings" = "Open Settings";
+"Dismiss" = "Dismiss";
+"Checking the app’s dictation settings…" = "Checking the app’s dictation settings…";
+"Set a shortcut in the app, then click Check again." = "Set a shortcut in the app, then click Check again.";
+"No shortcut found. Set one in the app, then check again." = "No shortcut found. Set one in the app, then check again.";
+
+"Set a dictation shortcut" = "Set a dictation shortcut";
+"Choose a shortcut in the app, then check again." = "Choose a shortcut in the app, then check again.";
+
+"Check" = "Check";
+"Both apps stay connected. The microphone follows the app you’re typing in." = "Both apps stay connected. The microphone follows the app you’re typing in.";

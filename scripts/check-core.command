@@ -10,8 +10,11 @@ compile_run() {
   "$TASK_CHECK/$name"
 }
 compile_run repeat shared/BLEWire.swift MacQuickKeys.swift KeyRepeat.swift Tests/KeyRepeat/main.swift
-compile_run dictation MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationShortcut/main.swift
-compile_run microphone MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift shared/SecureLink.swift Tests/MicrophoneNetwork/main.swift
+compile_run discovery DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationDiscovery/main.swift
+compile_run dictation DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationShortcut/main.swift
+compile_run microphone DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift shared/SecureLink.swift shared/MicrophoneWire.swift Tests/MicrophoneNetwork/main.swift
+compile_run mic-stop shared/SecureLink.swift Tests/MicrophoneStop/main.swift
+compile_run ble-audio shared/SecureLink.swift shared/MicrophoneWire.swift Tests/BLEMicrophone/main.swift
 compile_run keys shared/BLEWire.swift MacQuickKeys.swift Tests/QuickKeys/main.swift
 compile_run displays CursorBounds.swift Tests/CursorBounds/main.swift
 compile_run connection ConnectionState.swift Tests/ConnectionState/main.swift

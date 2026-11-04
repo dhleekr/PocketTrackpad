@@ -6,7 +6,8 @@ import ApplicationServices
 final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegate {
     private var central:CBCentralManager!
     private var peer:CBPeripheral?
-    private var input:CBCharacteristic?,reply:CBCharacteristic?
+    private var input:CBCharacteristic?,reply:CBCharacteristic?,microphoneInput:CBCharacteristic?,microphoneReply:CBCharacteristic?
+    private var microphoneBuffer=PadFrameDecoder(),microphoneCipher:BLEMicrophoneCipher?,microphoneWrites=MicrophoneBLEQueue()
     private var buffer=BLEFrames(),writes=[Data]()
     private var challenge="",authenticated=false
     private var lastSeen=Date(),attempted=[UUID:Date]()
@@ -14,12 +15,14 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
     private var timer:DispatchSourceTimer?
     private let apply:([String:Any])->String
     private let report:(String)->Void
+    private let microphoneReceive:(Data,UUID,@escaping (Data)->Void)->Void
+    private let microphoneClose:(UUID)->Void
     private var token:String? {
         let path=FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/PocketTrackpad/pairing.key")
         return (try? String(contentsOf:path,encoding:.utf8))?.trimmingCharacters(in:.whitespacesAndNewlines)
     }
-    init(apply:@escaping ([String:Any])->String,report:@escaping (String)->Void){
-        self.apply=apply;self.report=report;super.init()
+    init(apply:@escaping ([String:Any])->String,report:@escaping (String)->Void,microphoneReceive:@escaping (Data,UUID,@escaping (Data)->Void)->Void={_,_,_ in},microphoneClose:@escaping (UUID)->Void={_ in}){
+        self.apply=apply;self.report=report;self.microphoneReceive=microphoneReceive;self.microphoneClose=microphoneClose;super.init()
         central=CBCentralManager(delegate:self,queue:queue)
         let t=DispatchSource.makeTimerSource(queue:queue);timer=t;t.schedule(deadline:.now()+1,repeating:1)
         t.setEventHandler{[weak self] in
@@ -43,20 +46,23 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
     func peripheral(_ peripheral:CBPeripheral,didDiscoverServices error:Error?){
         guard peer?.identifier==peripheral.identifier else{return}
         guard error==nil,let service=peripheral.services?.first(where:{$0.uuid==CBUUID(string:BLEWire.reverseService)}) else{close("Bluetooth service unavailable");return}
-        peripheral.discoverCharacteristics([CBUUID(string:BLEWire.input),CBUUID(string:BLEWire.reply)],for:service)
+        peripheral.discoverCharacteristics([CBUUID(string:BLEWire.input),CBUUID(string:BLEWire.reply),CBUUID(string:BLEWire.microphoneInput),CBUUID(string:BLEWire.microphoneReply)],for:service)
     }
     func peripheral(_ peripheral:CBPeripheral,didDiscoverCharacteristicsFor service:CBService,error:Error?){
         guard peer?.identifier==peripheral.identifier else{return}
         input=service.characteristics?.first{$0.uuid==CBUUID(string:BLEWire.input)};reply=service.characteristics?.first{$0.uuid==CBUUID(string:BLEWire.reply)}
+        microphoneInput=service.characteristics?.first{$0.uuid==CBUUID(string:BLEWire.microphoneInput)};microphoneReply=service.characteristics?.first{$0.uuid==CBUUID(string:BLEWire.microphoneReply)}
         guard error==nil,let input,reply != nil else{close("Bluetooth channel unavailable");return};peripheral.setNotifyValue(true,for:input)
     }
     func peripheral(_ peripheral:CBPeripheral,didUpdateNotificationStateFor characteristic:CBCharacteristic,error:Error?){
         guard peer?.identifier==peripheral.identifier else{return}
+        if characteristic.uuid==microphoneInput?.uuid{return}
         guard error==nil,characteristic.isNotifying,let token else{close("Bluetooth pairing failed");return}
+        if let microphoneInput{peripheral.setNotifyValue(true,for:microphoneInput)}
         _ = token // The phone sends its fresh nonce first; bind both nonces into the proofs.
     }
     private func send(_ object:[String:Any]){
-        var object=object;object["protocol"]=6
+        var object=object;object["protocol"]=7;object["bluetoothMicrophone"]=microphoneInput != nil && microphoneReply != nil
         guard let peer,let reply,var data=try? JSONSerialization.data(withJSONObject:object) else{return};data.append(10)
         let size=peer.maximumWriteValueLength(for:.withoutResponse);guard size>0 else{return}
         guard writes.count+((data.count+size-1)/size)<=256 else{close("Bluetooth connection stalled");return}
@@ -64,9 +70,18 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
         pump(peer,reply)
     }
     private func pump(_ peer:CBPeripheral,_ reply:CBCharacteristic){while peer.canSendWriteWithoutResponse,!writes.isEmpty {peer.writeValue(writes.removeFirst(),for:reply,type:.withoutResponse)}}
-    func peripheralIsReady(toSendWriteWithoutResponse peripheral:CBPeripheral){if let reply,peer?.identifier==peripheral.identifier {pump(peripheral,reply)}}
+    func peripheralIsReady(toSendWriteWithoutResponse peripheral:CBPeripheral){if let reply,peer?.identifier==peripheral.identifier {pump(peripheral,reply)};pumpMicrophone()}
     func peripheral(_ peripheral:CBPeripheral,didUpdateValueFor characteristic:CBCharacteristic,error:Error?){
-        guard peer?.identifier==peripheral.identifier,error==nil,characteristic.uuid==input?.uuid,let data=characteristic.value else{return}
+        guard peer?.identifier==peripheral.identifier,error==nil,let data=characteristic.value else{return}
+        if characteristic.uuid==microphoneInput?.uuid {
+            guard authenticated,microphoneCipher != nil else{return}
+            do{for frame in try microphoneBuffer.append(data){
+                let packet=try microphoneCipher!.open(frame);lastSeen=Date();let id=peripheral.identifier
+                microphoneReceive(packet,id,{[weak self] reply in self?.queue.async{[weak self] in guard let self,self.peer?.identifier==id,self.authenticated else{return};self.sendMicrophone(reply)}})
+            }}catch{close("Bluetooth audio authentication failed")}
+            return
+        }
+        guard characteristic.uuid==input?.uuid else{return}
         do {for frame in try buffer.append(data){
             guard let object=try JSONSerialization.jsonObject(with:frame) as? [String:Any] else{throw BLEFrames.Failure.oversized}
             if !authenticated {
@@ -74,6 +89,7 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
                     challenge=offer+BLEProof.nonce();send(["challenge":challenge,"proof":BLEProof.make(role:"host",nonce:challenge,token:token)]);continue
                 }
                 guard !challenge.isEmpty,object["hello"] as? String==challenge,let proof=object["proof"] as? String,BLEProof.valid(proof,role:"phone",nonce:challenge,token:token) else{close("Pairing failed. Scan the Mac QR again.");return}
+                microphoneCipher=try BLEMicrophoneCipher(token:token ?? "",challenge:challenge,role:.mac)
                 authenticated=true;_ = apply(["type":"status","name":"diagBLEAuth"]);lastSeen=Date();send(["status":apply(["type":"status"])=="ready" ? "ok":"permission"]);report("Bluetooth connected");continue
             }
             guard let id=object["id"] as? Int,let events=object["events"] as? [[String:Any]],BLEWire.valid(events) else{throw BLEFrames.Failure.oversized}
@@ -86,12 +102,23 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
             lastSeen=Date();var status="ok";for event in events{if apply(event)=="permission" {status="permission"}};send(["status":status,"id":id])
         }} catch{close("Bluetooth connection closed")}
     }
+    private func sendMicrophone(_ data:Data){
+        guard authenticated,microphoneCipher != nil else{return}
+        do{try microphoneWrites.enqueue(PadSecureLink.frame(microphoneCipher!.seal(data)),isAudio:false);pumpMicrophone()}catch{close("Bluetooth audio connection closed")}
+    }
+    private func pumpMicrophone(){
+        guard let peer,let reply=microphoneReply,writes.isEmpty else{return}
+        let size=peer.maximumWriteValueLength(for:.withoutResponse)
+        while peer.canSendWriteWithoutResponse,let packet=microphoneWrites.next(maximum:size){peer.writeValue(packet,for:reply,type:.withoutResponse);microphoneWrites.sent(packet.count)}
+    }
     func peripheral(_ peripheral:CBPeripheral,didModifyServices invalidatedServices:[CBService]){
         guard peer?.identifier==peripheral.identifier,invalidatedServices.contains(where:{$0.uuid==CBUUID(string:BLEWire.reverseService)}) else{return}
         close("Waiting for iPhone")
     }
     private func close(_ text:String){
         if authenticated {_ = apply(["type":"up"])}
+        if let peer{microphoneClose(peer.identifier)}
+        microphoneInput=nil;microphoneReply=nil;microphoneCipher=nil;microphoneBuffer=PadFrameDecoder();microphoneWrites.reset()
         let old=peer;peer=nil;input=nil;reply=nil;authenticated=false;challenge="";buffer.reset();writes=[]
         if let old{central?.cancelPeripheralConnection(old)};report(text);scan()
     }

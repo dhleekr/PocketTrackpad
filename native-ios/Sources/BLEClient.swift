@@ -10,7 +10,11 @@ import Combine
     var diagnostics:PadDiagnostics?
     var onLatency:((Double)->Void)?
     private var manager:CBPeripheralManager?
-    private var input:CBMutableCharacteristic?,reply:CBMutableCharacteristic?
+    private var input:CBMutableCharacteristic?,reply:CBMutableCharacteristic?,microphoneInput:CBMutableCharacteristic?,microphoneReply:CBMutableCharacteristic?
+    private var microphoneCipher:BLEMicrophoneCipher?,microphoneBuffer=PadFrameDecoder(),microphoneQueue=MicrophoneBLEQueue()
+    private var microphoneSubscribed=false,microphoneSupported=false
+    private var microphoneConnection:BLEMicrophoneConnection?
+    var bluetoothMicrophone:Bool{authenticated && ready && microphoneSubscribed && microphoneSupported && microphoneCipher != nil}
     private var peer:CBCentral?,token:String?,nonce=""
     private var enabled=false,authenticated=false,hostVerified=false
     private var buffer=BLEFrames(),packets=[Data](),queue=[PadEvent]()
@@ -32,7 +36,7 @@ import Combine
         if manager==nil {manager=CBPeripheralManager(delegate:self,queue:.main)}
         else if manager?.state == .poweredOn,peer==nil,!manager!.isAdvertising {advertise()}
         frameTimer?.invalidate()
-        let frameTimer=Timer(timeInterval:BLESendWindow.frameInterval,repeats:true){[weak self] _ in Task{@MainActor in self?.flush()}}
+        let frameTimer=Timer(timeInterval:BLESendWindow.frameInterval,repeats:true){[weak self] _ in Task{@MainActor in self?.flush();self?.pumpMicrophone()}}
         self.frameTimer=frameTimer;RunLoop.main.add(frameTimer,forMode:.common)
         timer?.invalidate();timer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in Task{@MainActor in
             guard let self,self.enabled else{return}
@@ -63,7 +67,9 @@ import Combine
         advertiseStarted=Date();clearSession();manager.stopAdvertising();manager.removeAllServices()
         input=CBMutableCharacteristic(type:CBUUID(string:BLEWire.input),properties:[.notifyEncryptionRequired],value:nil,permissions:[])
         reply=CBMutableCharacteristic(type:CBUUID(string:BLEWire.reply),properties:[.write,.writeWithoutResponse],value:nil,permissions:[.writeEncryptionRequired])
-        let service=CBMutableService(type:CBUUID(string:BLEWire.reverseService),primary:true);service.characteristics=[input!,reply!];manager.add(service)
+        microphoneInput=CBMutableCharacteristic(type:CBUUID(string:BLEWire.microphoneInput),properties:[.notifyEncryptionRequired],value:nil,permissions:[])
+        microphoneReply=CBMutableCharacteristic(type:CBUUID(string:BLEWire.microphoneReply),properties:[.write,.writeWithoutResponse],value:nil,permissions:[.writeEncryptionRequired])
+        let service=CBMutableService(type:CBUUID(string:BLEWire.reverseService),primary:true);service.characteristics=[input!,reply!,microphoneInput!,microphoneReply!];manager.add(service)
         message=PTText("Keep the Mac app open. Waiting for Bluetooth…")
     }
     func peripheralManager(_ peripheral:CBPeripheralManager,didAdd service:CBService,error:Error?){
@@ -78,9 +84,11 @@ import Combine
         else {message=PTText("Bluetooth discoverable. Waiting for Mac…")}
     }
     func peripheralManager(_ peripheral:CBPeripheralManager,central:CBCentral,didSubscribeTo characteristic:CBCharacteristic){
+        if peripheral === manager,enabled,central.identifier==peer?.identifier,characteristic.uuid==microphoneInput?.uuid{microphoneSubscribed=true;return}
         guard peripheral === manager,enabled,peer==nil,characteristic.uuid==input?.uuid else{return};diagnostics?.record(.bleSubscribe,count:central.maximumUpdateValueLength);peer=central;peripheral.setDesiredConnectionLatency(.low,for:central);lastReply=Date();nonce=BLEProof.nonce();notify(["offer":nonce]);message=PTText("Verifying the Mac QR…")
     }
     func peripheralManager(_ peripheral:CBPeripheralManager,central:CBCentral,didUnsubscribeFrom characteristic:CBCharacteristic){
+        if peripheral === manager,central.identifier==peer?.identifier,characteristic.uuid==microphoneInput?.uuid{microphoneSubscribed=false;microphoneConnection?.disconnected();microphoneConnection=nil;return}
         guard peripheral === manager,peer?.identifier==central.identifier else{return}
         clearSession()
         // Authentication stops advertising. Restore discovery after the Mac
@@ -91,6 +99,11 @@ import Combine
     func peripheralManager(_ peripheral:CBPeripheralManager,didReceiveWrite requests:[CBATTRequest]){
         guard peripheral === manager,enabled,let first=requests.first else{return}
         do {for request in requests{
+            if request.characteristic.uuid==microphoneReply?.uuid {
+                guard enabled,authenticated,request.central.identifier==peer?.identifier,request.offset==0,let data=request.value,microphoneCipher != nil else{throw PadSecureLink.Failure.invalidFrame}
+                for frame in try microphoneBuffer.append(data){let packet=try microphoneCipher!.open(frame);microphoneConnection?.deliver(packet);lastReply=Date()}
+                continue
+            }
             guard enabled,request.central.identifier==peer?.identifier,request.characteristic.uuid==reply?.uuid,request.offset==0,let data=request.value else{throw BLEFrames.Failure.oversized}
             for frame in try buffer.append(data){
                 guard let object=try JSONSerialization.jsonObject(with:frame) as? [String:Any] else{throw BLEFrames.Failure.oversized}
@@ -102,9 +115,12 @@ import Combine
                     }
                     guard hostVerified,!nonce.isEmpty,let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
                     diagnostics?.record(.bleAuth,value:1)
+                    guard let token else{throw PadSecureLink.Failure.closed}
+                    microphoneCipher=try BLEMicrophoneCipher(token:token,challenge:nonce,role:.phone)
                     authenticated=true;manager?.stopAdvertising()
                 }
                 guard let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
+                microphoneSupported=object["bluetoothMicrophone"] as? Bool == true
                 if let version=object["protocol"] as? Int{extendedInput=version>=2;customKeys=version>=3;gestureOptions=version>=4;remoteMicrophone=version>=5;continuousSystemGestures=version>=6}
                 if let id=object["id"] as? Int,let token=textReceipts.removeValue(forKey:id){onTextAck?(token,status=="ok")}
                 diagnostics?.record(.ack,sequence:object["id"] as? Int)
@@ -122,7 +138,29 @@ import Combine
         for offset in stride(from:0,to:data.count,by:size){packets.append(data.subdata(in:offset..<min(data.count,offset+size)))};pump()
     }
     private func pump(){guard let manager,let input,let peer else{return};while let data=packets.first{guard manager.updateValue(data,for:input,onSubscribedCentrals:[peer]) else{return};packets.removeFirst();diagnostics?.record(.sendComplete,count:data.count,pending:packets.count)}}
-    func peripheralManagerIsReady(toUpdateSubscribers peripheral:CBPeripheralManager){guard peripheral === manager else{return};pump();flush()}
+    func peripheralManagerIsReady(toUpdateSubscribers peripheral:CBPeripheralManager){guard peripheral === manager else{return};pump();flush();pumpMicrophone()}
+    func makeMicrophoneConnection()throws->BLEMicrophoneConnection {
+        guard bluetoothMicrophone,microphoneConnection==nil else{throw PadSecureLink.Failure.closed}
+        let link=BLEMicrophoneConnection(available:{[weak self] in self?.bluetoothMicrophone == true},write:{[weak self] data,isAudio in
+            guard let self else{throw PadSecureLink.Failure.closed};try self.sendMicrophone(data,isAudio:isAudio)
+        },close:{[weak self] session in
+            guard let self else{return}
+            if let session,let packet=try? JSONSerialization.data(withJSONObject:["op":"cancel","session":session]){try? self.sendMicrophone(packet,isAudio:false)}
+            self.microphoneConnection=nil
+        })
+        microphoneConnection=link;return link
+    }
+    private func sendMicrophone(_ data:Data,isAudio:Bool)throws {
+        guard bluetoothMicrophone,microphoneCipher != nil else{throw PadSecureLink.Failure.closed}
+        try microphoneQueue.enqueue(PadSecureLink.frame(microphoneCipher!.seal(data)),isAudio:isAudio);pumpMicrophone()
+    }
+    private func pumpMicrophone(){
+        guard authenticated,packets.isEmpty,let manager,let input=microphoneInput,let peer,microphoneSubscribed else{return}
+        for _ in 0..<2 {
+            guard let packet=microphoneQueue.next(maximum:peer.maximumUpdateValueLength),manager.updateValue(packet,for:input,onSubscribedCentrals:[peer]) else{return}
+            microphoneQueue.sent(packet.count)
+        }
+    }
     private(set) var extendedInput=false
     private(set) var customKeys=false
     private(set) var gestureOptions=false
@@ -164,6 +202,6 @@ import Combine
             self.manager?.removeAllServices();self.clearSession()
         }
     }
-    private func clearSession(){extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
+    private func clearSession(){microphoneConnection?.disconnected();microphoneConnection=nil;microphoneCipher=nil;microphoneBuffer=PadFrameDecoder();microphoneQueue.reset();microphoneSubscribed=false;microphoneSupported=false;extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
     private func restart(_ text:String){clearSession();if enabled{advertise()};message=text}
 }

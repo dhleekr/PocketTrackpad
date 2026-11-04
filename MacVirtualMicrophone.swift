@@ -89,11 +89,39 @@ final class MacVirtualMicrophone:MicrophoneAudioRouting {
         // Restoring the physical mic while GPT is still listening would record the room.
         if restore{restoreInput()}
     }
+    private func availableOtherInputs()->[AudioDeviceID] {
+        var address=AudioObjectPropertyAddress(mSelector:kAudioHardwarePropertyDevices,mScope:kAudioObjectPropertyScopeGlobal,mElement:kAudioObjectPropertyElementMain),size:UInt32=0
+        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject),&address,0,nil,&size)==noErr,size>0,size<=65536 else{return []}
+        var devices=[AudioDeviceID](repeating:0,count:Int(size)/MemoryLayout<AudioDeviceID>.size)
+        let read=devices.withUnsafeMutableBytes{AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),&address,0,nil,&size,$0.baseAddress!)}
+        guard read==noErr else{return []}
+        return devices.filter{id in
+            guard id != device else{return false}
+            var streams=AudioObjectPropertyAddress(mSelector:kAudioDevicePropertyStreams,mScope:kAudioObjectPropertyScopeInput,mElement:kAudioObjectPropertyElementMain),bytes:UInt32=0
+            return AudioObjectGetPropertyDataSize(id,&streams,0,nil,&bytes)==noErr && bytes>0
+        }.sorted{left,right in
+            func builtIn(_ id:AudioDeviceID)->Bool{
+                var transport=AudioObjectPropertyAddress(mSelector:kAudioDevicePropertyTransportType,mScope:kAudioObjectPropertyScopeGlobal,mElement:kAudioObjectPropertyElementMain),value:UInt32=0,bytes:UInt32=4
+                return AudioObjectGetPropertyData(id,&transport,0,nil,&bytes,&value)==noErr && value==kAudioDeviceTransportTypeBuiltIn
+            }
+            return builtIn(left) && !builtIn(right)
+        }
+    }
     func restoreInput(){
-        if previousInput != 0,defaultInput()==device{try? setInput(previousInput)}
+        guard device != 0 else{return}
+        if defaultInput()==device {
+            let inputs=availableOtherInputs()
+            let saved=UserDefaults.standard.string(forKey:"microphone.previousInputUID").map(Self.deviceID) ?? 0
+            let target=[previousInput,saved].first{inputs.contains($0)} ?? inputs.first
+            if let target{try? setInput(target)}
+        }
         if defaultInput() != device{UserDefaults.standard.removeObject(forKey:"microphone.previousInputUID")}
         previousInput=0
     }
+    /// Recover a stale virtual default left by an earlier receiver session.
+    static func restoreAbandonedInput(){
+        let recovery=MacVirtualMicrophone();recovery.device=deviceID();recovery.restoreInput()
+    }
     private func check(_ status:OSStatus)throws{if status != noErr{throw Failure.audio(status)}}
-    deinit{stop(restore:false)}
+    deinit{stop(restore:true)}
 }

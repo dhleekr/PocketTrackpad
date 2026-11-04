@@ -256,14 +256,14 @@ private struct MicrophoneSettings:View {
     var body:some View {
         Form {
             if let error=speech.error {Section(PTText("Last microphone error")){Text(error).foregroundStyle(.secondary)}}
-            Section(PTText("Microphone for GPT")) {
-                Text(PTText("Open the GPT input window on your Mac. Tap the iPhone microphone once to start, and again to stop. The trackpad stays available."))
+            Section(PTText("Microphone for your Mac")) {
+                Text(PTText("Focus the connected app’s input on your Mac. Tap the iPhone microphone to start, and again to stop. The trackpad stays available."))
             }
             Section(PTText("One-time Mac setup")) {
-                Text(PTText("In the Mac app, choose Set up microphone. This installs the virtual input device. Mac administrator authentication is required once."))
+                Text(PTText("In Mac Settings, install the iPhone microphone once. The standard macOS Installer asks for administrator approval."))
             }
             Section {
-                Text(PTText("Audio uses Wi-Fi. You can keep using Bluetooth for the trackpad."))
+                Text(PTText("Audio follows your selected connection: Wi-Fi or Bluetooth. Update both apps to 1.4.6 or later for Bluetooth audio."))
             } header:{Text(PTText("Connection"))} footer:{Text(PTText("PocketTrackpad sends audio directly to your Mac without saving recordings. GPT handles recognition under its own settings. Keep the iPhone app open."))}
         }.navigationTitle(PTText("Microphone"))
     }
@@ -278,7 +278,7 @@ private struct ControlVisibilitySettings:View {
                 Toggle(PTText("Microphone button"),isOn:$client.showMicrophone)
                 Toggle(PTText("Lock, rotation & settings"),isOn:$client.showTopControls)
             } footer:{Text(PTText("Use the arrow to show or hide controls. Your choice is saved."))}
-            Section {Text(PTText("The stop button stays available while recording. Messages disappear after a few seconds; the last microphone error remains in Microphone settings.")).foregroundStyle(.secondary)}
+            Section {Text(PTText("The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings.")).foregroundStyle(.secondary)}
         }.navigationTitle(PTText("On-screen controls"))
     }
 }

@@ -262,9 +262,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     private let engine=InputEngine()
     private var wifi:NativeWiFiHost?
     private var microphone:MacMicrophoneHost?
+    private var dictationSetup:DictationSetupController?
     private var microphoneStatus:NSTextField!
     private var bluetooth:BLEReverseHost?
     private var permissionTimer:Timer?
+    private var shortcutNoticeObserver:NSObjectProtocol?
     private var status:NSTextField!
     private var pairingLink=""
     private var latencyLabel:NSTextField!
@@ -325,8 +327,15 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     }
     func applicationShouldTerminate(_ sender:NSApplication)->NSApplication.TerminateReply {
         _ = engine.handle(["type":"up"])
-        Task{@MainActor in await microphone?.shutdown();sender.reply(toApplicationShouldTerminate:true)}
+        Task{@MainActor in MacNotice.shared.dismiss();DictationShortcutMonitor.shared.stop();await microphone?.shutdown();MacVirtualMicrophone.restoreAbandonedInput();sender.reply(toApplicationShouldTerminate:true)}
         return .terminateLater
+    }
+    @MainActor @objc private func setupDictation(){
+        guard window.attachedSheet==nil else{return}
+        let setup=DictationSetupController();dictationSetup=setup;setup.present(on:window,installMicrophone:{[weak self] in self?.installMicrophone()})
+    }
+    @MainActor private func showDictationSettings(){
+        window.makeKeyAndOrderFront(nil);NSApp.activate(ignoringOtherApps:true);setupDictation()
     }
     @objc private func setupMicrophone(){
         let installed=MacVirtualMicrophone.deviceID() != 0
@@ -357,6 +366,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     }
     func applicationDidFinishLaunching(_ notification:Notification){
         NSApp.setActivationPolicy(.accessory)
+        Task{@MainActor in DictationShortcutMonitor.shared.start()}
+        shortcutNoticeObserver=NotificationCenter.default.addObserver(forName:Notification.Name("PocketTrackpadDictationShortcutChanged"),object:nil,queue:.main){[weak self] notice in
+            guard notice.userInfo?["available"] as? Bool == false else{return}
+            Task{@MainActor [weak self] in MacNotice.shared.show(settings:{[weak self] in self?.showDictationSettings()})}
+        }
         DistributedNotificationCenter.default().addObserver(self,selector:#selector(revealConnection(_:)),name:ReceiverInstance.reopen,object:String(ProcessInfo.processInfo.processIdentifier))
         let menu=NSMenu(),applicationItem=NSMenuItem(),applicationMenu=NSMenu()
         let controlMenu=NSMenuItem(title:MacText("Computer setup…"),action:#selector(enableControl),keyEquivalent:"");controlMenu.target=self;applicationMenu.addItem(controlMenu)
@@ -368,9 +382,9 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         applicationMenu.addItem(.separator())
         applicationMenu.addItem(NSMenuItem(title:MacText("Quit PocketTrackpad"),action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q"))
         applicationItem.submenu=applicationMenu;menu.addItem(applicationItem);NSApp.mainMenu=menu
-        window=NSWindow(contentRect:NSRect(x:0,y:0,width:380,height:440),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
+        window=NSWindow(contentRect:NSRect(x:0,y:0,width:380,height:420),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
         window.title="PocketTrackpad for Mac";window.delegate=self;window.isReleasedWhenClosed=false
-        window.contentMinSize=NSSize(width:360,height:440)
+        window.contentMinSize=NSSize(width:380,height:420)
         guard let content=window.contentView else{return}
         func label(_ text:String,size:CGFloat=13,secondary:Bool=false)->NSTextField {
             let field=NSTextField(wrappingLabelWithString:text)
@@ -394,10 +408,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         NSLayoutConstraint.activate([qr.widthAnchor.constraint(equalToConstant:144),qr.heightAnchor.constraint(equalToConstant:144)])
         let hint=label(MacText("Open PocketTrackpad on iPhone and scan this QR. Then choose Wi-Fi or Bluetooth."),size:12,secondary:true);hint.alignment = .center
         let separator=NSBox();separator.boxType = .separator
-        let permission=NSButton(title:MacText("Computer setup…"),target:self,action:#selector(enableControl))
-        permission.bezelStyle = .rounded
-        let microphoneSetup=NSButton(title:MacText("Microphone setup…"),target:self,action:#selector(setupMicrophone));microphoneSetup.bezelStyle = .rounded
-        let setup=NSStackView(views:[permission,microphoneSetup]);setup.orientation = .horizontal;setup.spacing=12;setup.alignment = .centerY
+        let setup=NSButton(title:MacText("Settings…"),target:self,action:#selector(setupDictation))
+        setup.bezelStyle = .rounded;setup.font = .systemFont(ofSize:13)
+        setup.image=NSImage(systemSymbolName:"gearshape",accessibilityDescription:nil);setup.imagePosition = .imageLeading
+        setup.translatesAutoresizingMaskIntoConstraints=false
+        NSLayoutConstraint.activate([setup.widthAnchor.constraint(equalToConstant:132),setup.heightAnchor.constraint(equalToConstant:30)])
         microphoneStatus=label("",size:12,secondary:true);microphoneStatus.isHidden=true
         microphoneStatus.alignment = .center
         let note=label(MacText("Closing this window keeps the connection running."),size:11,secondary:true)
@@ -428,11 +443,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
             microphone=try? MacMicrophoneHost(token:key,report:{[weak self] text in
                 let failed=text.hasPrefix("Microphone start failed:")
                 let message:String
-                if text.hasSuffix("restartRequired"){message="GPT microphone registered. Quit and reopen GPT once, then try again."}
-                else if text.hasSuffix("shortcutConfiguration"){message="GPT microphone shortcut could not be registered. Existing shortcuts were preserved."}
+                if text.hasSuffix("setupRequired") || text.hasSuffix("buttonUnavailable"){message="Connect a dictation shortcut in the Mac app first."}
                 else if text.hasSuffix("alreadyRecording"){message="Finish the existing GPT recording before starting the iPhone microphone."}
                 else{message=failed ? "Could not open GPT dictation. Click the GPT input and try again.":text}
                 self?.microphoneStatus.stringValue=MacText(message)
+                if failed{Task{@MainActor [weak self] in MacNotice.shared.show(settings:{[weak self] in self?.showDictationSettings()})}}
                 self?.microphoneStatus.isHidden = !(failed || text=="iPhone microphone active" || text=="Stop recording in GPT; virtual microphone is silent")
                 // Bounded startup stages only: no audio, transcripts, tokens or window contents.
                 let url=URL(fileURLWithPath:NSTemporaryDirectory()).appendingPathComponent("PocketTrackpad-microphone-stages.json")
@@ -441,11 +456,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
                 if let data=try? JSONSerialization.data(withJSONObject:Array(events.suffix(32))),FileManager.default.createFile(atPath:url.path,contents:data,attributes:[.posixPermissions:0o600]) == false {return}
             })
             wifi=try NativeWiFiHost(token:key,apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.wifi)})
-            bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.bluetooth)})
+            bluetooth=BLEReverseHost(apply:{[weak self] in self?.apply($0) ?? "invalid"},report:{[weak self] in self?.report($0,from:.bluetooth)},microphoneReceive:{[weak self] packet,peer,send in Task{@MainActor in await self?.microphone?.receiveBluetooth(packet,peer:peer,send:send)}},microphoneClose:{[weak self] peer in Task{@MainActor in await self?.microphone?.closeBluetooth(peer:peer)}})
         }catch{status.stringValue=MacText("Could not start. Reopen PocketTrackpad.")}
         permissionTimer=Timer.scheduledTimer(withTimeInterval:1,repeats:true){[weak self] _ in
             self?.refreshLatency()
-            permission.toolTip=MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control")
+            setup.toolTip=MacText(AXIsProcessTrusted() ? "Mac control enabled":"Enable Mac control")
             self?.window.title=AXIsProcessTrusted() ? "PocketTrackpad for Mac":MacText("PocketTrackpad · Enable Mac control")
         }
     }
@@ -457,7 +472,7 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
     func windowShouldClose(_ sender:NSWindow)->Bool{sender.orderOut(nil);return false}
     func applicationShouldTerminateAfterLastWindowClosed(_ sender:NSApplication)->Bool{false}
     func applicationShouldHandleReopen(_ sender:NSApplication,hasVisibleWindows flag:Bool)->Bool{window.makeKeyAndOrderFront(nil);sender.activate(ignoringOtherApps:true);return false}
-    func applicationWillTerminate(_ notification:Notification){DistributedNotificationCenter.default().removeObserver(self);permissionTimer?.invalidate();_ = engine.handle(["type":"up"]);wifi=nil;bluetooth=nil}
+    func applicationWillTerminate(_ notification:Notification){if let shortcutNoticeObserver{NotificationCenter.default.removeObserver(shortcutNoticeObserver)};DistributedNotificationCenter.default().removeObserver(self);permissionTimer?.invalidate();_ = engine.handle(["type":"up"]);wifi=nil;bluetooth=nil}
 }
 
 @main struct PocketTrackpadMain {

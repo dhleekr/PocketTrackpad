@@ -300,3 +300,24 @@
 "Finish the existing Mac recording before starting the iPhone microphone." = "Finish the existing Mac recording before starting the iPhone microphone.";
 "Use the arrow to show or hide controls. Your choice is saved." = "Use the arrow to show or hide controls. Your choice is saved.";
 "Hide controls" = "Hide controls";
+
+"Starting Mac microphone…" = "Starting Mac microphone…";
+
+"Stopping Mac microphone…" = "Stopping Mac microphone…";
+
+"Microphone active" = "Microphone active";
+
+"Connect a dictation shortcut in the Mac app first." = "Connect a dictation shortcut in the Mac app first.";
+
+"Update the Mac receiver to 1.4.5 or later for safe dictation setup." = "Update the Mac receiver to 1.4.5 or later for safe dictation setup.";
+
+"Click the connected app’s input window on your Mac before starting the microphone." = "Click the connected app’s input window on your Mac before starting the microphone.";
+
+"Retry stopping" = "Retry stopping";
+"Microphone for your Mac" = "Microphone for your Mac";
+"Focus the connected app’s input on your Mac. Tap the iPhone microphone to start, and again to stop. The trackpad stays available." = "Focus the connected app’s input on your Mac. Tap the iPhone microphone to start, and again to stop. The trackpad stays available.";
+"In Mac Settings, install the iPhone microphone once. The standard macOS Installer asks for administrator approval." = "In Mac Settings, install the iPhone microphone once. The standard macOS Installer asks for administrator approval.";
+"Audio follows your selected connection: Wi-Fi or Bluetooth. Update both apps to 1.4.6 or later for Bluetooth audio." = "Audio follows your selected connection: Wi-Fi or Bluetooth. Update both apps to 1.4.6 or later for Bluetooth audio.";
+"The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings." = "The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings.";
+"The microphone connection was lost. Reconnect the selected transport." = "The microphone connection was lost. Reconnect the selected transport.";
+"Update the Mac receiver to 1.4.6 or later for microphone control." = "Update the Mac receiver to 1.4.6 or later for microphone control.";
