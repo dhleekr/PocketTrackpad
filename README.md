@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.6.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.7.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -160,3 +160,5 @@ Copyright © 2026 Doohyun Lee. All rights reserved for original source and brand
 The Mac build bundles a signed Core Audio driver derived from Apple's MIT-licensed NullAudio sample. See [third-party notices](THIRD_PARTY_NOTICES.md) and [driver provenance](virtual-microphone/vendor/SOURCE.txt). The iPhone build has no bundled speech model or speech-recognition dependency. The released 1.3 version used on-device recognition; 1.4 replaces that path with audio forwarding.
 
 The Mac receiver keeps a single Settings button in its window. Settings groups Mac control permission, microphone installation, and dictation connection. Microphone installation opens a separately signed macOS Installer package, with no Terminal window. Only Installer requests administrator authorization; the receiver does not elevate itself. The Sound input list exposes one iPhone microphone source. Quit is available in the app menu or with Command-Q; closing the window preserves the connection.
+
+Mac 1.4.7 adds the standard Command-W Close Window action. Closing the window keeps the receiver running; Command-Q quits. The iPhone build remains 1.4.6 (47).
