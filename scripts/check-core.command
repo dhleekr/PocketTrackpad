@@ -21,6 +21,8 @@ compile_run connection ConnectionState.swift Tests/ConnectionState/main.swift
 compile_run gestures native-ios/Sources/GesturePreferences.swift native-ios/Sources/GestureEngine.swift native-ios/Tests/main.swift
 compile_run wire shared/BLEWire.swift native-ios/Tests/BLE/main.swift
 compile_run motion MotionPlayback.swift Tests/Motion/main.swift -framework CoreVideo
+swiftc -module-cache-path "$TASK_CACHE" MotionPlayback.swift Tests/ScrollBurst/main.swift -framework CoreVideo -o "$TASK_CHECK/scroll-burst"
+"$TASK_CHECK/scroll-burst" Tests/ScrollBurst/fixture.json
 compile_run flow shared/BLEWire.swift Tests/BLEFlow/main.swift
 clang -O2 -c vendor/TouchSynthesis/TouchEvents.c -o "$TASK_CHECK/touch.o"
 clang -O2 -fobjc-arc -c NativeMagnify.m -o "$TASK_CHECK/magnify.o"

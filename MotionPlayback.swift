@@ -12,10 +12,12 @@ struct MotionTimeline {
     private var lastArrival:Double?
     private(set) var output=MotionValue()
     var delay=1.0/60.0
+    var burstPacing=false
     var bufferedCount:Int {points.count}
     mutating func append(x:Double,y:Double,sourceTime:Double?,arrival:Double) {
         guard x.isFinite,y.isFinite,arrival.isFinite else{return}
         let source=sourceTime.flatMap{$0.isFinite && $0>=0 ? $0:nil}
+        let sourceStep=source.flatMap { value in lastSource.flatMap { value>$0 && value-$0<0.08 ? value-$0:nil } }
         if let previous=lastArrival,arrival-previous>0.08 {
             points=[];offset=nil;lastSource=nil
         }
@@ -25,8 +27,10 @@ struct MotionTimeline {
             let candidate=arrival-source
             if let old=offset {
                 if candidate<old {
-                    let shift=candidate-old
-                    for i in points.indices {points[i].time += shift}
+                    if !burstPacing {let shift=candidate-old;for i in points.indices {points[i].time += shift}}
+                    // Update the scroll clock estimate for new points only. Moving
+                    // queued history behind the playhead collapses a delayed
+                    // packet burst into one large first-frame scroll jump.
                     offset=candidate
                 }
             } else {offset=candidate}
@@ -39,6 +43,11 @@ struct MotionTimeline {
                 points=[Point(time:arrival-delay,value:output)]
             }
             lastSource=source
+        }
+        if burstPacing,let last=points.last,let sourceStep {
+            // Drain a startup/network burst at up to twice source speed, with
+            // at most 40 ms of extra queued time. Never invent movement.
+            time=max(time,min(arrival+0.04,last.time+sourceStep*0.5))
         }
         if points.isEmpty {points.append(Point(time:time-delay,value:output))}
         let value=MotionValue(x:x,y:y)
@@ -119,7 +128,7 @@ final class MotionPlayback {
         let momentum=event["momentum"] as? String ?? "none"
         let nextKey=type+":"+(event["name"] as? String ?? "")+":"+(momentum=="none" ? "none":"inertia")
         if active && key != nextKey {flush(apply:apply)}
-        if !active {timeline.delay=delay;key=nextKey;absolute=type=="dockSwipe";target=MotionValue();emitted=MotionValue();pendingBegin=false;pendingMomentumBegin=false}
+        if !active {timeline.delay=delay;timeline.burstPacing=type=="scroll";key=nextKey;absolute=type=="dockSwipe";target=MotionValue();emitted=MotionValue();pendingBegin=false;pendingMomentumBegin=false}
         template=event
         let x=event["x"] as? Double ?? 0,y=event["y"] as? Double ?? 0
         if absolute {target=MotionValue(x:x,y:y)}else{target.x+=x;target.y+=y}
