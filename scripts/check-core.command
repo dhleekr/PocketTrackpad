@@ -29,6 +29,7 @@ clang -O2 -fobjc-arc Tests/NativeGestures/main.m "$TASK_CHECK/magnify.o" "$TASK_
 clang -std=c11 -O2 virtual-microphone/Loopback.c Tests/Microphone/loopback.c -o "$TASK_CHECK/audio-loop"
 "$TASK_CHECK/audio-loop"
 compile_run scroll NativeScroll.swift Tests/Scroll/main.swift "$TASK_CHECK/magnify.o" "$TASK_CHECK/touch.o" -framework Cocoa
+compile_run scroll-response NativeScroll.swift Tests/ScrollResponse/main.swift "$TASK_CHECK/magnify.o" "$TASK_CHECK/touch.o" -framework Cocoa
 clang -O2 -c NativeDockSwipe.c -o "$TASK_CHECK/dock.o"
 clang -O2 Tests/DockSwipe/main.c "$TASK_CHECK/touch.o" "$TASK_CHECK/dock.o" -framework ApplicationServices -o "$TASK_CHECK/dock"
 "$TASK_CHECK/dock"

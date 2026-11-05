@@ -1,5 +1,30 @@
 import Cocoa
 
+// Apply before display interpolation, using source time rather than packet
+// arrival time so network bursts do not change the scroll-speed curve.
+struct VerticalScrollResponse {
+    private var vertical:Bool?
+    private var lastTime:Double?
+    private var speed=0.0
+    private(set) var currentGain=1.0
+    mutating func apply(x:Double,y:Double,phase:String,momentum:String,time:Double)->CGPoint {
+        guard x.isFinite,y.isFinite,time.isFinite else{return .zero}
+        if phase=="began" && momentum=="none" {self=Self()}
+        if momentum=="none",phase=="ended" || phase=="cancelled" {return CGPoint(x:x,y:y)}
+        if vertical==nil,hypot(x,y)>0 {vertical=abs(y)>abs(x)*1.5}
+        guard vertical==true else{return CGPoint(x:x,y:y)}
+        if momentum=="none" {
+            let dt=lastTime.map{min(0.05,max(1.0/1000.0,time-$0))} ?? 1.0/120.0
+            let instant=min(2400,abs(y)/dt)
+            if lastTime != nil {speed += (instant-speed)*(1-exp(-dt/0.04))}
+            lastTime=time
+            let progress=min(1,max(0,(speed-40)/660))
+            currentGain=1.5+1.5*progress*progress*(3-2*progress)
+        }
+        return CGPoint(x:x,y:min(2000,max(-2000,y*currentGain)))
+    }
+}
+
 @_silgen_name("PocketCreatePanCompanion") private func PocketCreatePanCompanion(_ x:Double,_ y:Double,_ phase:Int32)->Unmanaged<CGEvent>?
 
 // Keep the began phase until the first real pixel reaches AppKit. WebKit uses
@@ -13,7 +38,9 @@ struct NativeScrollStream {
         if phase=="began" {remainder = .zero;beganPending=true}
         if momentum=="began" {momentumBeganPending=true}
         let totalX=x+remainder.x,totalY=y+remainder.y
-        let pixelX=totalX.rounded(.towardZero),pixelY=totalY.rounded(.towardZero)
+        // Error diffusion keeps the accumulated distance exact while reducing
+        // the initial pixel dead zone from one point to half a point.
+        let pixelX=totalX.rounded(),pixelY=totalY.rounded()
         remainder=CGPoint(x:totalX-pixelX,y:totalY-pixelY)
         let terminal=(momentum=="none" && (phase=="ended" || phase=="cancelled")) || momentum=="ended"
         guard pixelX != 0 || pixelY != 0 || terminal else{return nil}

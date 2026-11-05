@@ -21,4 +21,12 @@ check(pan?.type.rawValue==29 && pan?.getIntegerValueField(CGEventField(rawValue:
 check(pan?.getIntegerValueField(CGEventField(rawValue:132)!)==1 && abs((pan?.getDoubleValueField(CGEventField(rawValue:116)!) ?? 0)-5.0/3.0)<0.00001,"pan carries its own phase and displacement")
 var inertia=NativeScrollStream();let inertial=inertia.event(x:5,y:0,phase:"ended",momentum:"began")
 check(inertial.flatMap{NativeScrollStream.companion(for:$0)}==nil,"momentum never creates another finger gesture")
+var fine=NativeScrollStream()
+let fineStart=fine.event(x:0,y:0.6,phase:"began",momentum:"none").flatMap{NSEvent(cgEvent:$0)}
+check(fineStart?.scrollingDeltaY==1 && fineStart?.phase == .began,"fine scrolling responds at half a point instead of waiting for a full point")
+let fineReverse=fine.event(x:0,y:-0.6,phase:"changed",momentum:"none").flatMap{NSEvent(cgEvent:$0)}
+check(fineReverse?.scrollingDeltaY == -1,"fractional reversal returns exactly to its starting position")
+var accumulated=NativeScrollStream();var distance:CGFloat=0
+for i in 0..<120 {distance += accumulated.event(x:0,y:0.2,phase:i==0 ? "began":"changed",momentum:"none").flatMap{NSEvent(cgEvent:$0)}?.scrollingDeltaY ?? 0}
+check(abs(distance-24)<0.00001,"fine scrolling preserves total distance without drift")
 exit(failed==0 ? 0:1)

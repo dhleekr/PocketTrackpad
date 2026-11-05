@@ -29,6 +29,7 @@ final class InputEngine {
     private var cursorPosition = CGEvent(source:nil)?.location ?? .zero
     private var lastMotion = Date.distantPast
     private var scrollStream=NativeScrollStream()
+    private var scrollResponse=VerticalScrollResponse()
     private let eventLock = NSLock()
     private var cursorBounds=CursorBounds(readDisplays:{
         var ids=[CGDirectDisplayID](repeating:0,count:32),count:UInt32=0
@@ -85,6 +86,7 @@ final class InputEngine {
         }
     }
     private func releaseDrag() {
+        scrollResponse=VerticalScrollResponse()
         keyRepeater.stop();playback.discard();if let cancelled=scrollStream.cancel(){NativeScrollStream.post(cancelled)}
         if dockAxis != 0 {if dockAxis==9{_ = PocketPostNotification(dockProgress,0,0,8)}else{_ = PocketPostDock(dockProgress,0,dockAxis,8)};dockAxis=0;dockProgress=0}
         if rotating{_ = PocketPostRotate(0,4);rotating=false}
@@ -96,6 +98,7 @@ final class InputEngine {
         }
     }
     func handle(_ d: [String:Any])->String {
+        var d=d
         eventLock.lock();defer { eventLock.unlock() }
         if d["type"] as? String=="status",let name=d["name"] as? String {
             if name=="diagnosticBeginWiFi" || name=="diagnosticBeginBluetooth" {
@@ -117,6 +120,10 @@ final class InputEngine {
         }
         diagnostics.record(.gesture,source:d["t"] as? Double,event:d["type"] as? String,phase:d["phase"] as? String,momentum:d["momentum"] as? String,value:hypot(d["x"] as? Double ?? 0,d["y"] as? Double ?? 0))
         guard AXIsProcessTrusted() else{playback.discard();return "permission"}
+        if d["type"] as? String=="scroll" {
+            let value=scrollResponse.apply(x:d["x"] as? Double ?? 0,y:d["y"] as? Double ?? 0,phase:d["phase"] as? String ?? "changed",momentum:d["momentum"] as? String ?? "none",time:d["t"] as? Double ?? ProcessInfo.processInfo.systemUptime)
+            d["x"]=Double(value.x);d["y"]=Double(value.y)
+        }
         if pacingAvailable {
             let now=ProcessInfo.processInfo.systemUptime
             if MotionPlayback.isContinuous(d){arrivalCadence.record(now);if let source=d["t"] as? Double{sourceCadence.record(source)}}
@@ -130,8 +137,8 @@ final class InputEngine {
             if kind == "status" { return AXIsProcessTrusted() ? "ready" : "permission" }
             guard AXIsProcessTrusted() else { return "permission" }
             let x = (d["x"] as? Double ?? 0), y = (d["y"] as? Double ?? 0)
-            let observed = CGEvent(source:nil)?.location ?? .zero
-            let p = Date().timeIntervalSince(lastMotion)<0.15 ? cursorPosition : observed
+            let needsPointer=["move","down","click","double","right"].contains(kind)
+            let p=needsPointer ? (Date().timeIntervalSince(lastMotion)<0.15 ? cursorPosition:(CGEvent(source:nil)?.location ?? .zero)):.zero
             if kind == "dockSwipe" {
                 let axis:Int32=d["name"] as? String=="horizontal" ? 1:d["name"] as? String=="scale" ? 3:d["name"] as? String=="notification" ? 9:2
                 let phase=d["phase"] as? String ?? "changed"
