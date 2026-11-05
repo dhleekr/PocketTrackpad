@@ -381,7 +381,11 @@ final class Host:NSObject,NSApplicationDelegate,NSWindowDelegate {
         #endif
         applicationMenu.addItem(.separator())
         applicationMenu.addItem(NSMenuItem(title:MacText("Quit PocketTrackpad"),action:#selector(NSApplication.terminate(_:)),keyEquivalent:"q"))
-        applicationItem.submenu=applicationMenu;menu.addItem(applicationItem);NSApp.mainMenu=menu
+        applicationItem.submenu=applicationMenu;menu.addItem(applicationItem)
+        let windowItem=NSMenuItem(),windowMenu=NSMenu(title:MacText("Window"))
+        windowMenu.addItem(NSMenuItem(title:MacText("Close Window"),action:#selector(NSWindow.performClose(_:)),keyEquivalent:"w"))
+        windowItem.submenu=windowMenu;menu.addItem(windowItem)
+        NSApp.mainMenu=menu;NSApp.windowsMenu=windowMenu
         window=NSWindow(contentRect:NSRect(x:0,y:0,width:380,height:420),styleMask:[.titled,.closable,.miniaturizable,.resizable],backing:.buffered,defer:false)
         window.title="PocketTrackpad for Mac";window.delegate=self;window.isReleasedWhenClosed=false
         window.contentMinSize=NSSize(width:380,height:420)
