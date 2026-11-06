@@ -145,7 +145,7 @@ enum CodexDictationPreference {
         held=true
         do {
             try post(true);pressedAt=ProcessInfo.processInfo.systemUptime
-            if mode == .toggle{try release();toggleStarted=true}
+            if mode == .toggle{toggleStarted=true;try await releasePulse()}
             if mode == .doubleTap {
                 // Codex's primary shortcut starts hands-free recording on a
                 // second tap within 400 ms. Release the first within its 100 ms

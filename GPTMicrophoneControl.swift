@@ -88,6 +88,20 @@ private struct MicrophoneAXIdentity:Hashable {
     func prepare()async throws{
         guard AXIsProcessTrusted() else{throw Failure.permission}
         guard let app=NSWorkspace.shared.frontmostApplication,let bundle=app.bundleIdentifier else{throw Failure.openGPT}
+        if bundle=="com.anthropic.claudefordesktop" {
+            let original=try focusedWindow()
+            do {
+                // Claude exposes explicit Dictate/Finish controls. Prefer that
+                // persistent button session over its keyboard-triggered path.
+                _ = try button(in:original,labels:startLabels)
+                window=original
+                return
+            }catch Failure.buttonUnavailable {
+                if (try? button(in:original,labels:stopLabels)) != nil{throw Failure.alreadyRecording}
+                // Older Claude versions may not expose the composer controls.
+                // Preserve the configured shortcut fallback for those versions.
+            }
+        }
         let setup=Task{@MainActor in try await DictationShortcutMonitor.shared.current(bundle:bundle)}
         preparation=setup
         defer{preparation=nil}
