@@ -145,15 +145,16 @@ enum CodexDictationPreference {
         held=true
         do {
             try post(true);pressedAt=ProcessInfo.processInfo.systemUptime
-            if mode == .toggle{toggleStarted=true;try await releasePulse()}
+            if mode == .toggle{try release();toggleStarted=true}
             if mode == .doubleTap {
                 // Codex's primary shortcut starts hands-free recording on a
                 // second tap within 400 ms. Release the first within its 100 ms
                 // pending-start window; never keep modifiers held while routing.
-                try await releasePulse()
+                try await Task.sleep(for:.milliseconds(20))
+                try release()
                 try await Task.sleep(for:.milliseconds(40))
                 try post(true);held=true;toggleStarted=true
-                try await releasePulse()
+                try release()
             }
             let deadline=ProcessInfo.processInfo.systemUptime+startTimeout
             while ProcessInfo.processInfo.systemUptime<deadline {

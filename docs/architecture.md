@@ -53,4 +53,4 @@ A phone-started microphone session remains active across Mac focus changes. Capt
 
 Codex setup prefers its configured single-tap dictation shortcut. When only the primary hold shortcut is assigned, the adapter uses Codex's double-tap hands-free gesture and releases all keys immediately. It does not hold modifiers for the duration of recording or modify the target's preferences. Claude retains its configured toggle shortcut.
 
-Synthetic toggle key pulses remain down for 60 ms so asynchronous global-hotkey watchers can observe them. Stop waits briefly after activating the original app and sends at most one toggle; key release and cancellation cleanup remain balanced.
+Synthetic stop key pulses remain down for 60 ms so asynchronous global-hotkey watchers can observe them. The Codex start gesture retains its short first tap and immediate second release. Stop waits briefly after activating the original app and sends at most one toggle; key release and cancellation cleanup remain balanced.

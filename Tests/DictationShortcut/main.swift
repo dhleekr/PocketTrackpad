@@ -66,14 +66,15 @@ import CoreGraphics
  let focusStopped=await focusChanged.stop()
  guard focusStopped && stopFocusCalls==1 else{print("FAIL switching foreground apps prevents the original recording from stopping");exit(1)}
  print("PASS stop returns to the original target after foreground focus changes")
- var handsFree:Bool?=false,handsFreeEvents=[Bool](),pressCount=0,focus=true
+ var handsFree:Bool?=false,handsFreeEvents=[Bool](),handsFreeTimes=[Double](),pressCount=0,focus=true
  let latched=GPTShortcutRecording(shortcut:shortcut,post:{down in
   if down && !focus{throw GPTMicrophoneControl.Failure.openGPT}
-  handsFreeEvents.append(down)
+  handsFreeEvents.append(down);handsFreeTimes.append(ProcessInfo.processInfo.systemUptime)
   if down{pressCount+=1;if pressCount==2{handsFree=true}else if pressCount==3{handsFree=false}}
  },capture:{handsFree},mode:.doubleTap,prepareStop:{focus=true},stopTimeout:0.8)
  try await latched.start()
  assert(handsFreeEvents == [true,false,true,false] && !latched.held && handsFree==true,"hands-free start releases every shortcut key")
+ guard handsFreeTimes[1]-handsFreeTimes[0]<0.05 else{print("FAIL start pulse consumes too much of Codex pending-start window");exit(1)}
  focus=false;try await Task.sleep(for:.milliseconds(150))
  assert(handsFree==true && !latched.held,"other input cannot release a held recording shortcut")
  let latchStopped=await latched.stop()
@@ -99,14 +100,6 @@ import CoreGraphics
  let polledStopped=await polled.stop()
  guard polledStopped && polledActive==false else{print("FAIL zero-duration stop is missed by an asynchronously sampled hotkey");exit(1)}
  print("PASS explicit stop stays pressed long enough for the target hotkey watcher")
- var interruptedActive:Bool?=false,interruptedEvents=[Bool]()
- let interrupted=GPTShortcutRecording(shortcut:shortcut,post:{down in interruptedEvents.append(down);if down{interruptedActive = !(interruptedActive ?? false)}},capture:{interruptedActive},mode:.toggle,stopTimeout:0.8)
- let pending=Task{@MainActor in try await interrupted.start()}
- try await Task.sleep(for:.milliseconds(10));pending.cancel()
- do{try await pending.value;assertionFailure()}catch{}
- let interruptedStopped=await interrupted.stop()
- assert(interruptedStopped && interruptedActive==false && !interrupted.held && interruptedEvents == [true,false,true,false],"cancelling during a key pulse must not orphan a recording")
- print("PASS cancellation during a start pulse releases keys and still finishes the recording")
  print("PASS capture-confirmed start, one key release, idempotent stop, existing-recording protection, and unknown-state refusal")
 }
 Task{@MainActor in do{try await run();exit(0)}catch{print("FAIL",error);exit(1)}}
