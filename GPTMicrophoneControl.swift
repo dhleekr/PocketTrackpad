@@ -108,7 +108,13 @@ private struct MicrophoneAXIdentity:Hashable {
                 if NSWorkspace.shared.frontmostApplication?.processIdentifier != original.processIdentifier {
                     original.activate(options:[.activateIgnoringOtherApps])
                     for _ in 0..<10 {
-                        if NSWorkspace.shared.frontmostApplication?.processIdentifier==original.processIdentifier{return}
+                        if NSWorkspace.shared.frontmostApplication?.processIdentifier==original.processIdentifier{
+                            // Activation notification and hotkey recovery are
+                            // asynchronous even after frontmostApplication flips.
+                            try await Task.sleep(for:.milliseconds(150))
+                            guard NSWorkspace.shared.frontmostApplication?.processIdentifier==original.processIdentifier else{throw Failure.openGPT}
+                            return
+                        }
                         try await Task.sleep(for:.milliseconds(50))
                     }
                 }

@@ -86,6 +86,27 @@ import CoreGraphics
  let backgroundStopped=await background.stop()
  guard backgroundStopped && backgroundActive==false else{print("FAIL background capture metadata skips the original app stop");exit(1)}
  print("PASS stop refreshes the original app before interpreting background capture metadata")
+ var polledActive:Bool?=false,keyDown=false,presses=0
+ let polled=GPTShortcutRecording(shortcut:shortcut,post:{down in
+  keyDown=down
+  if down {
+   presses+=1
+   if presses==1{polledActive=true}
+   else {Task{@MainActor in try? await Task.sleep(for:.milliseconds(20));if keyDown{polledActive=false}}}
+  }
+ },capture:{polledActive},mode:.toggle,stopTimeout:0.8)
+ try await polled.start()
+ let polledStopped=await polled.stop()
+ guard polledStopped && polledActive==false else{print("FAIL zero-duration stop is missed by an asynchronously sampled hotkey");exit(1)}
+ print("PASS explicit stop stays pressed long enough for the target hotkey watcher")
+ var interruptedActive:Bool?=false,interruptedEvents=[Bool]()
+ let interrupted=GPTShortcutRecording(shortcut:shortcut,post:{down in interruptedEvents.append(down);if down{interruptedActive = !(interruptedActive ?? false)}},capture:{interruptedActive},mode:.toggle,stopTimeout:0.8)
+ let pending=Task{@MainActor in try await interrupted.start()}
+ try await Task.sleep(for:.milliseconds(10));pending.cancel()
+ do{try await pending.value;assertionFailure()}catch{}
+ let interruptedStopped=await interrupted.stop()
+ assert(interruptedStopped && interruptedActive==false && !interrupted.held && interruptedEvents == [true,false,true,false],"cancelling during a key pulse must not orphan a recording")
+ print("PASS cancellation during a start pulse releases keys and still finishes the recording")
  print("PASS capture-confirmed start, one key release, idempotent stop, existing-recording protection, and unknown-state refusal")
 }
 Task{@MainActor in do{try await run();exit(0)}catch{print("FAIL",error);exit(1)}}

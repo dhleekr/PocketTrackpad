@@ -145,16 +145,15 @@ enum CodexDictationPreference {
         held=true
         do {
             try post(true);pressedAt=ProcessInfo.processInfo.systemUptime
-            if mode == .toggle{try post(false);held=false;toggleStarted=true}
+            if mode == .toggle{toggleStarted=true;try await releasePulse()}
             if mode == .doubleTap {
                 // Codex's primary shortcut starts hands-free recording on a
                 // second tap within 400 ms. Release the first within its 100 ms
                 // pending-start window; never keep modifiers held while routing.
-                try await Task.sleep(for:.milliseconds(20))
-                try release()
+                try await releasePulse()
                 try await Task.sleep(for:.milliseconds(40))
-                try post(true);held=true
-                try release();toggleStarted=true
+                try post(true);held=true;toggleStarted=true
+                try await releasePulse()
             }
             let deadline=ProcessInfo.processInfo.systemUptime+startTimeout
             while ProcessInfo.processInfo.systemUptime<deadline {
@@ -167,6 +166,12 @@ enum CodexDictationPreference {
     }
 
     private func release()throws {if held{try post(false);held=false}}
+    private func releasePulse()async throws {
+        // Global hotkey watchers may sample physical key state on a later tick.
+        // A zero-duration down/up pair can disappear before that tick observes it.
+        try await Task.sleep(for:.milliseconds(60))
+        try release()
+    }
     func hasFinished()->Bool {
         guard confirmed,activity()==false else{inactiveSince=nil;return false}
         let now=ProcessInfo.processInfo.systemUptime
@@ -180,8 +185,13 @@ enum CodexDictationPreference {
             // still running. Restore the original target before checking it.
             do{
                 try await prepareStop()
-                if activity()==true {try post(true);try post(false);toggleStopSent=true}
-            }catch{try? post(false);return false}
+                if activity()==true {
+                    try post(true);held=true
+                    // Never retry this toggle after an ambiguous completion.
+                    toggleStopSent=true
+                    try await releasePulse()
+                }
+            }catch{try? release();return false}
         }
         if held,let pressedAt {
             let remaining=0.45-(ProcessInfo.processInfo.systemUptime-pressedAt)
