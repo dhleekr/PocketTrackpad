@@ -45,7 +45,7 @@ enum GPTDictationBinding {
 /// Only PocketTrackpad preferences are changed by this explicit setup.
 enum DictationProfiles {
     static let codexSettingsOrigin="codex-settings"
-    enum Mode:String,Codable {case hold,toggle}
+    enum Mode:String,Codable {case hold,toggle,doubleTap}
     struct Profile:Codable,Equatable {let key:UInt16;let flags:UInt64;let mode:Mode;var origin:String?=nil}
     static let preferenceKey="microphone.appShortcuts.v1"
     static func load(bundle:String,defaults:UserDefaults = .standard)->Profile? {
@@ -76,12 +76,15 @@ enum DictationProfiles {
 /// Decode this single preference only. Never read overrides as the live setting,
 /// modify target preferences, or log any other state from this file.
 enum CodexDictationPreference {
-    private struct Settings:Decodable {let globalDictationHotkey:String?}
+    private struct Settings:Decodable {let globalDictationHotkey:String?;let globalDictationToggleHotkey:String?}
     static var url:URL {FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex/.codex-global-state.json")}
     static func profile(data:Data)->DictationProfiles.Profile? {
-        guard data.count<=16_777_216,let settings=try? JSONDecoder().decode(Settings.self,from:data),
-              let text=settings.globalDictationHotkey,let shortcut=GPTDictationBinding.Shortcut.parse(text) else{return nil}
-        return .init(key:shortcut.key,flags:shortcut.flags,mode:.hold,origin:DictationProfiles.codexSettingsOrigin)
+        guard data.count<=16_777_216,let settings=try? JSONDecoder().decode(Settings.self,from:data) else{return nil}
+        if let text=settings.globalDictationToggleHotkey,let shortcut=GPTDictationBinding.Shortcut.parse(text){
+            return .init(key:shortcut.key,flags:shortcut.flags,mode:.toggle,origin:DictationProfiles.codexSettingsOrigin)
+        }
+        guard let text=settings.globalDictationHotkey,let shortcut=GPTDictationBinding.Shortcut.parse(text) else{return nil}
+        return .init(key:shortcut.key,flags:shortcut.flags,mode:.doubleTap,origin:DictationProfiles.codexSettingsOrigin)
     }
     static func read(at url:URL=Self.url)->DictationProfiles.Profile? {
         guard let values=try? url.resourceValues(forKeys:[.isRegularFileKey,.fileSizeKey]),values.isRegularFile==true,
@@ -121,8 +124,8 @@ enum CodexDictationPreference {
     }
 }
 
-/// Hold-to-dictate is deliberately used under a toggle UI: release is idempotent,
-/// unlike a second toggle which could accidentally start another recording.
+/// Prefer hands-free recording without held modifier keys. Explicit legacy hold
+/// bindings remain supported; toggle stops are sent at most once per session.
 @MainActor final class GPTShortcutRecording {
     let shortcut:GPTDictationBinding.Shortcut
     private let post:(Bool)throws->Void
@@ -143,6 +146,16 @@ enum CodexDictationPreference {
         do {
             try post(true);pressedAt=ProcessInfo.processInfo.systemUptime
             if mode == .toggle{try post(false);held=false;toggleStarted=true}
+            if mode == .doubleTap {
+                // Codex's primary shortcut starts hands-free recording on a
+                // second tap within 400 ms. Release the first within its 100 ms
+                // pending-start window; never keep modifiers held while routing.
+                try await Task.sleep(for:.milliseconds(20))
+                try release()
+                try await Task.sleep(for:.milliseconds(40))
+                try post(true);held=true
+                try release();toggleStarted=true
+            }
             let deadline=ProcessInfo.processInfo.systemUptime+startTimeout
             while ProcessInfo.processInfo.systemUptime<deadline {
                 guard held || toggleStarted else{throw CancellationError()}
@@ -162,8 +175,13 @@ enum CodexDictationPreference {
         do{try release();return true}catch{return false}
     }
     func stop()async->Bool {
-        if mode == .toggle,toggleStarted,!toggleStopSent,activity()==true {
-            do{try await prepareStop();try post(true);try post(false);toggleStopSent=true}catch{try? post(false);return false}
+        if mode != .hold,toggleStarted,!toggleStopSent {
+            // Background capture metadata can read inactive while dictation is
+            // still running. Restore the original target before checking it.
+            do{
+                try await prepareStop()
+                if activity()==true {try post(true);try post(false);toggleStopSent=true}
+            }catch{try? post(false);return false}
         }
         if held,let pressedAt {
             let remaining=0.45-(ProcessInfo.processInfo.systemUptime-pressedAt)

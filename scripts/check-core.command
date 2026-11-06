@@ -13,6 +13,7 @@ compile_run repeat shared/BLEWire.swift MacQuickKeys.swift KeyRepeat.swift Tests
 compile_run discovery DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationDiscovery/main.swift
 compile_run dictation DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationShortcut/main.swift
 compile_run microphone DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift shared/SecureLink.swift shared/MicrophoneWire.swift Tests/MicrophoneNetwork/main.swift
+compile_run microphone-focus DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift MacMicrophoneHost.swift shared/SecureLink.swift shared/MicrophoneWire.swift Tests/MicrophoneFocus/main.swift
 compile_run mic-stop shared/SecureLink.swift Tests/MicrophoneStop/main.swift
 compile_run ble-audio shared/SecureLink.swift shared/MicrophoneWire.swift Tests/BLEMicrophone/main.swift
 compile_run keys shared/BLEWire.swift MacQuickKeys.swift Tests/QuickKeys/main.swift

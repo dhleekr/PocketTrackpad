@@ -37,9 +37,10 @@ import Network
             guard let self else{return}
             if let pending=self.pendingRestoration,pending.controls.hasFinished(){pending.route.restoreInput();self.pendingRestoration=nil;self.report("Microphone stopped")}
             for (id,session) in self.sessions {
-                if session.started,self.controls?.hasFinished()==true {
-                    session.started=false;self.send(["status":"ended","session":session.token ?? ""],to:id);await self.close(id,delay:true)
-                }else if ProcessInfo.processInfo.systemUptime-session.last>(session.started ? 2:30){await self.close(id)}
+                // A phone-started session belongs to the explicit start/stop
+                // controls, not foreground focus or transient capture metadata.
+                // Keep routing audio until stop, disconnect, timeout, or Quit.
+                if ProcessInfo.processInfo.systemUptime-session.last>(session.started ? 2:30){await self.close(id)}
             }
         }}
         self.timer=timer;RunLoop.main.add(timer,forMode:.common)

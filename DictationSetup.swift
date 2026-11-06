@@ -217,7 +217,7 @@ final class DictationShortcutRecorder:NSButton {
     private func refresh(){
         manualChanged=false
         detectedNow=false;automatic.title=MacText("Connect");recorder.profile=DictationProfiles.load(bundle:bundle)
-        mode.selectItem(at:recorder.profile?.mode == .toggle ? 1:0);updateSummary()
+        mode.selectItem(at:recorder.profile?.mode == .hold ? 0:1);updateSummary()
         instructions.stringValue=MacText("Both apps stay connected. The microphone follows the app you’re typing in.")
     }
 }

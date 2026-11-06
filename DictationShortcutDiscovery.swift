@@ -192,7 +192,7 @@ enum DictationShortcutDiscovery {
         var found=[DictationProfiles.Profile](),missing=false,alive=false
         for field in fields {
             guard let raw=value(field,kAXValueAttribute) as? String else{continue};alive=true
-            if let key=parseDisplayed(raw){found.append(.init(key:key.key,flags:key.flags,mode:bundle=="com.openai.codex" ? .hold:.toggle,origin:"auto"))}
+            if let key=parseDisplayed(raw){found.append(.init(key:key.key,flags:key.flags,mode:bundle=="com.openai.codex" ? .doubleTap:.toggle,origin:"auto"))}
             else if ["no shortcut","not assigned","none","off","disabled","없음","사용 안 함"].contains(raw.lowercased()){missing=true}
         }
         let unique=found.reduce(into:[DictationProfiles.Profile]()){if !$0.contains($1){$0.append($1)}}

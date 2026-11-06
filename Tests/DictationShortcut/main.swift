@@ -17,6 +17,10 @@ import CoreGraphics
  DictationProfiles.save(nil,bundle:"test.app",defaults:defaults)
  assert(DictationProfiles.load(bundle:"test.app",defaults:defaults)==nil)
  print("PASS per-app user-owned shortcut profiles persist and remove without touching target settings")
+ let codexProfile=CodexDictationPreference.profile(data:try data(["globalDictationHotkey":"Control+Option+Command+H"]))
+ guard codexProfile?.mode.rawValue=="doubleTap" else{print("FAIL Codex starts with a held shortcut that other input can cancel");exit(1)}
+ let toggledProfile=CodexDictationPreference.profile(data:try data(["globalDictationHotkey":"Control+H","globalDictationToggleHotkey":"Command+J"]))
+ assert(toggledProfile?.mode == .toggle && toggledProfile?.key==38,"prefer the target's assigned hands-free shortcut")
  let shortcut=GPTDictationBinding.Shortcut.parse("Ctrl+Command+Alt+H")!
  var active:Bool?=false,events=[Bool]()
  let recording=GPTShortcutRecording(shortcut:shortcut,post:{down in events.append(down);active=down},capture:{active})
@@ -62,6 +66,26 @@ import CoreGraphics
  let focusStopped=await focusChanged.stop()
  guard focusStopped && stopFocusCalls==1 else{print("FAIL switching foreground apps prevents the original recording from stopping");exit(1)}
  print("PASS stop returns to the original target after foreground focus changes")
+ var handsFree:Bool?=false,handsFreeEvents=[Bool](),pressCount=0,focus=true
+ let latched=GPTShortcutRecording(shortcut:shortcut,post:{down in
+  if down && !focus{throw GPTMicrophoneControl.Failure.openGPT}
+  handsFreeEvents.append(down)
+  if down{pressCount+=1;if pressCount==2{handsFree=true}else if pressCount==3{handsFree=false}}
+ },capture:{handsFree},mode:.doubleTap,prepareStop:{focus=true},stopTimeout:0.8)
+ try await latched.start()
+ assert(handsFreeEvents == [true,false,true,false] && !latched.held && handsFree==true,"hands-free start releases every shortcut key")
+ focus=false;try await Task.sleep(for:.milliseconds(150))
+ assert(handsFree==true && !latched.held,"other input cannot release a held recording shortcut")
+ let latchStopped=await latched.stop()
+ assert(latchStopped && handsFree==false && handsFreeEvents == [true,false,true,false,true,false])
+ _ = await latched.stop();assert(handsFreeEvents.count==6,"repeated stop must not start another recording")
+ print("PASS Codex hands-free double tap releases all keys and stops the original app after focus moves")
+ var appFocused=true,backgroundActive:Bool?=false
+ let background=GPTShortcutRecording(shortcut:shortcut,post:{down in if down{backgroundActive = !(backgroundActive ?? false)}},capture:{backgroundActive},mode:.toggle,activity:{appFocused ? backgroundActive:false},prepareStop:{appFocused=true},stopTimeout:0.8)
+ try await background.start();appFocused=false
+ let backgroundStopped=await background.stop()
+ guard backgroundStopped && backgroundActive==false else{print("FAIL background capture metadata skips the original app stop");exit(1)}
+ print("PASS stop refreshes the original app before interpreting background capture metadata")
  print("PASS capture-confirmed start, one key release, idempotent stop, existing-recording protection, and unknown-state refusal")
 }
 Task{@MainActor in do{try await run();exit(0)}catch{print("FAIL",error);exit(1)}}

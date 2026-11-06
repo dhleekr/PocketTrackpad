@@ -48,3 +48,7 @@ The receiver needs macOS Accessibility authorization. Pointer and scroll events 
 The public Xcode project has no development team configured. Each developer supplies their own team, bundle identifier, and distribution setup. Mac local builds go to `build/mac`; signed and notarized distribution artifacts remain separate. Neither signing material nor App Store archives belong in this repository.
 
 Website source lives in `website/`. The live site is hosted separately and serves the signed Mac ZIP. Do not infer public App Store availability merely from a successful TestFlight upload.
+
+A phone-started microphone session remains active across Mac focus changes. Capture-activity metadata is used for start/stop confirmation and pending input restoration, not as an automatic stop trigger during an active phone session. Explicit stop, transport loss, the audio inactivity timeout, and receiver Quit still end the session. Stop retains the original receiving app even if another app is foreground.
+
+Codex setup prefers its configured single-tap dictation shortcut. When only the primary hold shortcut is assigned, the adapter uses Codex's double-tap hands-free gesture and releases all keys immediately. It does not hold modifiers for the duration of recording or modify the target's preferences. Claude retains its configured toggle shortcut.
