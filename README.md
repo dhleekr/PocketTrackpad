@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.9.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.12.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -164,3 +164,5 @@ The Mac receiver keeps a single Settings button in its window. Settings groups M
 Mac 1.4.7 adds the standard Command-W Close Window action. Closing the window keeps the receiver running; Command-Q quits. The iPhone build remains 1.4.6 (47).
 
 Mac 1.4.9 improves vertical scrolling with a source-time speed curve and a smaller initial pixel dead zone. Delayed input batches use bounded catch-up instead of collapsing into a large first-frame jump. Radio latency and display refresh remain hardware-dependent.
+
+Mac 1.4.12 keeps active microphone sessions running across app focus changes, uses Codex’s assigned single-tap dictation shortcut, and prefers Claude’s Dictate and Finish controls. Start, background recording, and stop were verified locally in both target apps. App versions and accessibility exposure can affect compatibility. The iPhone 1.4.12 release packages the existing controller with the current companion setup; these microphone fixes are in the Mac receiver.
