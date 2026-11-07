@@ -121,6 +121,7 @@ import Combine
                 }
                 guard let status=object["status"] as? String,["ok","permission"].contains(status) else{throw BLEFrames.Failure.oversized}
                 microphoneSupported=object["bluetoothMicrophone"] as? Bool == true
+                keyRepeatTuning=object["keyRepeatTuning"] as? Bool == true
                 if let version=object["protocol"] as? Int{extendedInput=version>=2;customKeys=version>=3;gestureOptions=version>=4;remoteMicrophone=version>=5;continuousSystemGestures=version>=6}
                 if let id=object["id"] as? Int,let token=textReceipts.removeValue(forKey:id){onTextAck?(token,status=="ok")}
                 diagnostics?.record(.ack,sequence:object["id"] as? Int)
@@ -163,6 +164,7 @@ import Combine
     }
     private(set) var extendedInput=false
     private(set) var customKeys=false
+    private(set) var keyRepeatTuning=false
     private(set) var gestureOptions=false
     private(set) var remoteMicrophone=false
     private(set) var continuousSystemGestures=false
@@ -202,6 +204,6 @@ import Combine
             self.manager?.removeAllServices();self.clearSession()
         }
     }
-    private func clearSession(){microphoneConnection?.disconnected();microphoneConnection=nil;microphoneCipher=nil;microphoneBuffer=PadFrameDecoder();microphoneQueue.reset();microphoneSubscribed=false;microphoneSupported=false;extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
+    private func clearSession(){microphoneConnection?.disconnected();microphoneConnection=nil;microphoneCipher=nil;microphoneBuffer=PadFrameDecoder();microphoneQueue.reset();microphoneSubscribed=false;microphoneSupported=false;keyRepeatTuning=false;extendedInput=false;customKeys=false;gestureOptions=false;remoteMicrophone=false;continuousSystemGestures=false;textReceipts=[:];latencyMS=0;latencyReporter=LatencySnapshotReporter();sendWindow.reset();ready=false;authenticated=false;hostVerified=false;peer=nil;nonce="";buffer.reset();packets=[];queue=[];sent=[:]}
     private func restart(_ text:String){clearSession();if enabled{advertise()};message=text}
 }

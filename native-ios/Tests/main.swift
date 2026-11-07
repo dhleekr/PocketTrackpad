@@ -144,10 +144,36 @@ test("reversing a system swipe back to origin cancels it") {
  let(e,events)=fixture();e.update(fingers(3),at:0);e.update(fingers(3,dy:-80),at:0.1);e.update(fingers(3,dy:-1),at:0.2);e.update([:],at:0.25)
  return events().last?.type=="dockSwipe" && events().last?.phase=="cancelled"
 }
-test("two finger scroll can transition to pinch without a stuck scroll") {
- let(e,events)=fixture();e.update(fingers(2),at:0);e.update(fingers(2,dy:5),at:0.03)
- e.update([1:PadPoint(x:20,y:105),2:PadPoint(x:100,y:105)],at:0.06)
- let all=events();return all.contains{$0.type=="scroll" && $0.phase=="ended"} && all.contains{$0.type=="magnify" && $0.phase=="began"}
+test("committed scroll never turns into pinch until lift") {
+ let(e,events)=fixture();e.update(fingers(2),at:0);e.update(fingers(2,dy:12),at:0.03)
+ e.update([1:PadPoint(x:0,y:112),2:PadPoint(x:120,y:112)],at:0.06)
+ e.update(fingers(2,dy:28),at:0.09);e.update([:],at:0.3)
+ return events().contains{$0.type=="scroll"} && !events().contains{$0.type=="magnify"}
+}
+test("uncertain pinch onset does not emit a stray scroll") {
+ let(e,events)=fixture();e.update(fingers(2),at:0)
+ e.update([1:PadPoint(x:41,y:106),2:PadPoint(x:91,y:106)],at:0.016)
+ e.update([1:PadPoint(x:34,y:106),2:PadPoint(x:102,y:106)],at:0.032)
+ e.update([:],at:0.2)
+ return events().contains{$0.type=="magnify"} && !events().contains{$0.type=="scroll"}
+}
+test("small two finger jitter is not a scroll or pinch") {
+ let(e,events)=fixture();e.update(fingers(2),at:0)
+ e.update([1:PadPoint(x:42,y:104),2:PadPoint(x:86,y:104)],at:0.016)
+ return events().isEmpty
+}
+test("pinch stays pinch when the whole hand translates later") {
+ let(e,events)=fixture();e.update(fingers(2),at:0)
+ e.update([1:PadPoint(x:30,y:100),2:PadPoint(x:90,y:100)],at:0.03)
+ e.update([1:PadPoint(x:30,y:160),2:PadPoint(x:90,y:160)],at:0.08)
+ e.update([:],at:0.2)
+ return events().contains{$0.type=="magnify"} && !events().contains{$0.type=="scroll"}
+}
+test("lifting resets the scroll versus pinch decision") {
+ let(e,events)=fixture();e.update(fingers(2),at:0);e.update(fingers(2,dy:12),at:0.03);e.update([:],at:0.2)
+ let boundary=events().count
+ e.update(fingers(2),at:1);e.update([1:PadPoint(x:20,y:100),2:PadPoint(x:100,y:100)],at:1.03)
+ return events().dropFirst(boundary).contains{$0.type=="magnify"} && !events().dropFirst(boundary).contains{$0.type=="scroll" && $0.momentum=="none"}
 }
 test("coalesced samples retain every intermediate position") {
     var frames=PadTouchFrameAssembler();frames.reset(one(0,0),at:0)
@@ -361,6 +387,11 @@ test("closing Mission Control uses its own finger setting when App Expose is off
  let boundary=events().count
  e.update(fingers(3),at:0.6);e.update(fingers(3,dy:120),at:0.8);e.update([:],at:0.9)
  return events().dropFirst(boundary).contains{$0.name=="vertical" && ($0.x ?? 0)<0}
+}
+test("repeat settings survive event encoding on Wi-Fi and Bluetooth") {
+ let event=PadEvent(type:"key",phase:"began",name:"backspace",repeatDelay:0.65,repeatRate:17)
+ guard let data=try? JSONEncoder().encode(event),let result=try? JSONDecoder().decode(PadEvent.self,from:data) else{return false}
+ return result==event
 }
 print("Native gesture checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

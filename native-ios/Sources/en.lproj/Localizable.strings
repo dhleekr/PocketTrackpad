@@ -321,3 +321,19 @@
 "The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings." = "The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings.";
 "The microphone connection was lost. Reconnect the selected transport." = "The microphone connection was lost. Reconnect the selected transport.";
 "Update the Mac receiver to 1.4.6 or later for microphone control." = "Update the Mac receiver to 1.4.6 or later for microphone control.";
+
+"Camera zoom" = "Camera zoom";
+
+"Zoom in" = "Zoom in";
+
+"Zoom out" = "Zoom out";
+
+"Key repeat" = "Key repeat";
+
+"Repeat delay" = "Repeat delay";
+
+"Backspace speed" = "Backspace speed";
+
+"A tap sends one key immediately. Repeating starts only after this hold time." = "A tap sends one key immediately. Repeating starts only after this hold time.";
+
+"%.0f / s" = "%.0f / s";

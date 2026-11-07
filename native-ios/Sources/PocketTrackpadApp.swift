@@ -246,6 +246,15 @@ private struct QuickKeySettings:View {
                     }
                 }
             }
+            Section {
+                SettingSlider(title:"Repeat delay",valueText:PTFormat("%.2f s",client.keyRepeatDelay),value:$client.keyRepeatDelay,range:PadKeyRepeatTuning.delayRange,step:0.05)
+                    .disabled(client.ready && !client.supportsKeyRepeatTuning)
+            } header:{Text(PTText("Key repeat"))} footer:{Text(PTText("A tap sends one key immediately. Repeating starts only after this hold time."))}
+            Section {
+                SettingSlider(title:"Backspace speed",valueText:PTFormat("%.0f / s",client.backspaceRepeatRate),value:$client.backspaceRepeatRate,range:PadKeyRepeatTuning.rateRange,step:1)
+                    .disabled(client.ready && !client.supportsKeyRepeatTuning)
+                if client.ready && !client.supportsKeyRepeatTuning{Text(PTText("Update the Mac app to use these features.")).foregroundStyle(.secondary)}
+            }
             Section {Button(PTText("Restore default keys")){client.quickKeys=PadQuickKey.defaults}}
         }.navigationTitle(PTText("Quick keys"))
     }

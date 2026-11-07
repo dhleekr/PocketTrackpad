@@ -321,3 +321,19 @@
 "The stop button stays available until stopping is confirmed. Microphone errors appear only in Settings." = "종료가 확인될 때까지 정지 버튼을 사용할 수 있습니다. 마이크 오류는 설정에서만 표시합니다.";
 "The microphone connection was lost. Reconnect the selected transport." = "마이크 연결이 끊겼습니다. 선택한 연결 방식으로 다시 연결하세요.";
 "Update the Mac receiver to 1.4.6 or later for microphone control." = "마이크를 사용하려면 Mac 수신 앱을 1.4.6 이상으로 업데이트하세요.";
+
+"Camera zoom" = "카메라 확대·축소";
+
+"Zoom in" = "확대";
+
+"Zoom out" = "축소";
+
+"Key repeat" = "키 반복";
+
+"Repeat delay" = "반복 시작 대기";
+
+"Backspace speed" = "Backspace 반복 속도";
+
+"A tap sends one key immediately. Repeating starts only after this hold time." = "탭하면 즉시 한 번 입력합니다. 설정한 시간보다 길게 누르면 반복 입력을 시작합니다.";
+
+"%.0f / s" = "초당 %.0f회";

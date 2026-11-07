@@ -62,7 +62,7 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
         _ = token // The phone sends its fresh nonce first; bind both nonces into the proofs.
     }
     private func send(_ object:[String:Any]){
-        var object=object;object["protocol"]=7;object["bluetoothMicrophone"]=microphoneInput != nil && microphoneReply != nil
+        var object=object;object["keyRepeatTuning"]=true;object["protocol"]=7;object["bluetoothMicrophone"]=microphoneInput != nil && microphoneReply != nil
         guard let peer,let reply,var data=try? JSONSerialization.data(withJSONObject:object) else{return};data.append(10)
         let size=peer.maximumWriteValueLength(for:.withoutResponse);guard size>0 else{return}
         guard writes.count+((data.count+size-1)/size)<=256 else{close("Bluetooth connection stalled");return}

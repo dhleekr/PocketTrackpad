@@ -155,7 +155,7 @@ final class InputEngine {
                     if phase=="ended" || phase=="cancelled" {dockAxis=0;dockProgress=0}
                 }
             }else if kind == "key",let name=d["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable {
-                keyRepeater.handle(key,phase:d["phase"] as? String ?? "cancelled")
+                keyRepeater.handle(key,phase:d["phase"] as? String ?? "cancelled",repeatDelay:d["repeatDelay"] as? Double,repeatRate:d["repeatRate"] as? Double)
             }else if kind == "smartZoom" {_ = PocketPostSmartZoom()
             }else if kind == "rotate" {
                 let phase=d["phase"] as? String ?? "changed"

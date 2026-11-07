@@ -20,3 +20,28 @@ enum MacQuickKeys {
         return events
     }
 }
+
+/// A held key has one down/up boundary; repetitions do not release it.
+enum HeldKeyPhase {case began,repeated,ended}
+extension MacQuickKeys {
+    static func heldEvents(for key:PadQuickKey,phase:HeldKeyPhase,source:CGEventSource?)->[CGEvent] {
+        var flags=CGEventFlags(),events=[CGEvent]()
+        let modifiers:[(Bool,CGKeyCode,CGEventFlags)]=[(key.command,55,.maskCommand),(key.control,59,.maskControl),(key.shift,56,.maskShift)]
+        if phase == .began {
+            for (enabled,code,flag) in modifiers where enabled {
+                flags.insert(flag)
+                if let event=CGEvent(keyboardEventSource:source,virtualKey:code,keyDown:true){event.type = .flagsChanged;event.flags=flags;events.append(event)}
+            }
+        }else{for (enabled,_,flag) in modifiers where enabled{flags.insert(flag)}}
+        if let event=CGEvent(keyboardEventSource:source,virtualKey:key.keyCode,keyDown:phase != .ended){
+            event.flags=flags;event.setIntegerValueField(.keyboardEventAutorepeat,value:phase == .repeated ? 1:0);events.append(event)
+        }
+        if phase == .ended {
+            for (enabled,code,flag) in modifiers.reversed() where enabled {
+                flags.remove(flag)
+                if let event=CGEvent(keyboardEventSource:source,virtualKey:code,keyDown:false){event.type = .flagsChanged;event.flags=flags;events.append(event)}
+            }
+        }
+        return events
+    }
+}

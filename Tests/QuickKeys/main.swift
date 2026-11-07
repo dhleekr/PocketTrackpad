@@ -15,4 +15,13 @@ for key in PadQuickKey.allCases {
  var flags=CGEventFlags();if key.shift{flags.insert(.maskShift)};if key.command{flags.insert(.maskCommand)};if key.control{flags.insert(.maskControl)}
  check(downs.count==1 && ups.count==1 && downs[0].flags==flags && ups[0].flags==flags && downs[0].getIntegerValueField(.keyboardEventKeycode)==key.keyCode && events.last?.flags==[],"\(key.accessibilityTitle) has the correct key, modifiers, and balanced release")
 }
+let heldSource=CGEventSource(stateID:.privateState)
+for key in PadQuickKey.allCases {
+ let began=MacQuickKeys.heldEvents(for:key,phase:.began,source:heldSource)
+ let repeated=MacQuickKeys.heldEvents(for:key,phase:.repeated,source:heldSource)
+ let ended=MacQuickKeys.heldEvents(for:key,phase:.ended,source:heldSource)
+ check(began.filter{$0.type == .keyDown}.count==1 && !began.contains{$0.type == .keyUp},"held \(key) begins without releasing")
+ check(repeated.count==1 && repeated[0].type == .keyDown && repeated[0].getIntegerValueField(.keyboardEventAutorepeat)==1,"held \(key) repeats down only")
+ check(ended.filter{$0.type == .keyUp}.count==1 && ended.last?.flags==[],"held \(key) releases key and modifiers once")
+}
 exit(failures==0 ? 0:1)

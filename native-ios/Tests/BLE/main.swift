@@ -91,5 +91,15 @@ test("Shift-Tab posts Tab with Shift while plain Tab has no modifier") {
 test("custom arrow quick keys are accepted by the wire") {
  BLEWire.valid([["type":"shortcut","name":"up"]]) && BLEWire.valid([["type":"shortcut","name":"down"]])
 }
+test("key repeat settings accept the same bounded values on either transport") {
+ [0.2,0.35,1].allSatisfy{delay in [5.0,30,60].allSatisfy{rate in BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatDelay":delay,"repeatRate":rate]])}}
+}
+test("invalid repeat settings never reach the input engine") {
+ let invalid:[Any]=[true,"fast",-1.0,Double.nan,Double.infinity]
+ return invalid.allSatisfy{value in
+  !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatDelay":value]]) && !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatRate":value]])
+ } && !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatRate":61.0]]) && !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatDelay":0.05]])
+}
+test("older phones can omit repeat settings") {BLEWire.valid([["type":"key","phase":"began","name":"backspace"]])}
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

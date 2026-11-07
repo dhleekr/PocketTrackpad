@@ -27,6 +27,8 @@ struct PadEvent: Codable, Equatable {
     var name: String? = nil
     var t: Double? = nil
     var text: String? = nil
+    var repeatDelay:Double? = nil
+    var repeatRate:Double? = nil
 }
 
 enum PadHapticKind { case tap,press,release,gesture }
@@ -275,11 +277,14 @@ final class GestureEngine {
                 if gestures.enabled(.rotate){mode = .rotate;previousAngle=initialAngle;emit([PadEvent(type:"rotate",x:0,phase:"began")])}
                 else{mode = .system;systemAction=nil;return}
             }
-            if (mode == .pending || mode == .scroll),abs(pinch)>12 && abs(pinch)>translation*1.5 {
+            // Resolve two-finger intent only once. Ambiguous opening movement
+            // waits for a clear spacing change or shared translation.
+            let pinchOnset=max(8,min(14,initialGap*0.1))
+            if mode == .pending,abs(pinch)>pinchOnset && abs(pinch)>translation*1.6 {
                 if scrollStarted {emit([PadEvent(type:"scroll",x:0,y:0,phase:"ended",momentum:"none",name:scrollName)]);scrollStarted=false}
                 guard gestures.enabled(.pinchZoom) else{mode = .system;systemAction=nil;return}
                 mode = .pinch;previousGap=initialGap;emit([PadEvent(type:"magnify",x:0,phase:"began")])
-            } else if mode == .pending,translation>3 && translation>abs(pinch)*0.7 {mode = .scroll}
+            } else if mode == .pending,translation>6 && translation>abs(pinch)*1.5 {mode = .scroll}
             if mode == .rotate {
                 let delta=angleDifference(currentAngle,previousAngle)*180/Double.pi
                 if abs(delta)>0.001{emit([PadEvent(type:"rotate",x:delta,phase:"changed")])}

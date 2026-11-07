@@ -31,6 +31,11 @@ enum BLEWire {
             if t=="key" {
                 guard let name=e["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable,
                     let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
+                for (field,range) in [("repeatDelay",PadKeyRepeatTuning.delayRange),("repeatRate",PadKeyRepeatTuning.rateRange)] {
+                    if let value=e[field] {
+                        guard let number=value as? NSNumber,CFGetTypeID(number) != CFBooleanGetTypeID(),number.doubleValue.isFinite,range.contains(number.doubleValue) else{return false}
+                    }
+                }
             }
             if t=="rotate" {
                 guard let x=e["x"] as? NSNumber,abs(x.doubleValue)<=180,let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
@@ -169,6 +174,19 @@ enum PadTextInput {
 }
 
 /// Persist raw values so labels and localization can change without losing assignments.
+enum PadKeyRepeatTuning {
+    static let delayRange=0.2...1.0,rateRange=5.0...60.0
+    static let defaultDelay=0.35,defaultRate=30.0
+    static func delay(_ value:Double?)->Double {
+        guard let value,value.isFinite else{return defaultDelay}
+        return min(delayRange.upperBound,max(delayRange.lowerBound,value))
+    }
+    static func rate(_ value:Double?)->Double {
+        guard let value,value.isFinite else{return defaultRate}
+        return min(rateRange.upperBound,max(rateRange.lowerBound,value))
+    }
+}
+
 enum PadQuickKey:String,CaseIterable {
     case escape,tab,shiftTab,backspace,enter,space,up,down,left,right,interrupt,copy,paste,undo,redo,selectAll
     static let defaults:[Self]=[.escape,.tab,.backspace,.enter]
@@ -191,7 +209,7 @@ enum PadQuickKey:String,CaseIterable {
     case .space:return 49;case .up:return 126;case .down:return 125;case .left:return 123;case .right:return 124
     case .interrupt,.copy:return 8;case .paste:return 9;case .undo,.redo:return 6;case .selectAll:return 0
     }}
-    var repeatable:Bool {[Self.backspace,.tab,.space,.up,.down,.left,.right].contains(self)}
+    var repeatable:Bool {true}
     var shift:Bool {self == .shiftTab || self == .redo}
     var command:Bool {[Self.copy,.paste,.undo,.redo,.selectAll].contains(self)}
     var control:Bool {self == .interrupt}
