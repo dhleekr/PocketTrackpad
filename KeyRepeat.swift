@@ -5,7 +5,7 @@ import CoreGraphics
 struct KeyRepeatState {
     private(set) var key:PadQuickKey?
     private var next=0.0,pulse=0.0
-    var delay=PadKeyRepeatTuning.defaultDelay,interval=1.0/60.0,backspaceRate=PadKeyRepeatTuning.defaultRate
+    var delay=PadKeyRepeatTuning.defaultDelay,repeatRate=PadKeyRepeatTuning.defaultRate
     mutating func begin(_ key:PadQuickKey,at now:Double)->Bool {
         guard key.keyCode != nil,key.repeatable,now.isFinite else{return false}
         self.key=key;pulse=now;next=now+delay;return true
@@ -17,7 +17,7 @@ struct KeyRepeatState {
         guard now-pulse<0.5 else{self.key=nil;return nil}
         guard now+1e-9>=next else{return nil}
         // Keep the keyboard cadence despite timer jitter, skipping missed repeats.
-        let cadence=key == .backspace ? 1.0/backspaceRate:interval
+        let cadence=1.0/repeatRate
         let skipped=floor(max(0,now-next)/cadence)+1
         next+=skipped*cadence
         return key
@@ -52,7 +52,7 @@ final class MacKeyRepeater {
         let now=ProcessInfo.processInfo.systemUptime
         if phase=="began" {
             stopLocked(reason:"replaced")
-            state.delay=PadKeyRepeatTuning.delay(repeatDelay);state.backspaceRate=PadKeyRepeatTuning.rate(repeatRate)
+            state.delay=PadKeyRepeatTuning.delay(repeatDelay);state.repeatRate=PadKeyRepeatTuning.rate(repeatRate)
             guard state.begin(key,at:now) else{return}
             activity=ProcessInfo.processInfo.beginActivity(options:[.userInitiatedAllowingIdleSystemSleep,.latencyCritical],reason:"Respond to a held remote keyboard key")
             activeKey=key

@@ -112,5 +112,10 @@ test("different QR identities cannot share a discovery service") {
  let ids=(0..<256).compactMap{BLEDiscovery.service(token:String(format:"%064x",$0))}
  return ids.count==256 && Set(ids).count==256
 }
+test("all keyboard keys accept the shared repetition rate") {
+ PadQuickKey.allCases.filter{$0.keyCode != nil}.allSatisfy{key in
+  [5.0,12,30,60].allSatisfy{rate in BLEWire.valid([["type":"key","phase":"began","name":key.rawValue,"repeatRate":rate]])}
+ }
+}
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

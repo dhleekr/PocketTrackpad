@@ -192,6 +192,13 @@ enum PadTextInput {
 enum PadKeyRepeatTuning {
     static let delayRange=0.2...1.0,rateRange=5.0...60.0
     static let defaultDelay=0.35,defaultRate=30.0
+    static let ratePreferenceKey="pad.keyRepeatRate"
+    static func savedRate(in store:UserDefaults = .standard)->Double {
+        if let saved=store.object(forKey:ratePreferenceKey) as? Double{return rate(saved)}
+        let migrated=rate(store.object(forKey:"pad.backspaceRepeatRate") as? Double)
+        store.set(migrated,forKey:ratePreferenceKey)
+        return migrated
+    }
     static func delay(_ value:Double?)->Double {
         guard let value,value.isFinite else{return defaultDelay}
         return min(delayRange.upperBound,max(delayRange.lowerBound,value))

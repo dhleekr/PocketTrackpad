@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.25.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.26.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.25 (68).
+1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.26 (69).
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. Open the Mac DMG and drag PocketTrackpad to Applications. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -31,7 +31,7 @@ The Mac window shows the current connection round-trip time in milliseconds. Thi
 
 The bottom row defaults to **Esc, Tab, Backspace, and Enter**. In Settings → Quick keys, assign each position independently: plain keys, arrows, Shift+Tab, Ctrl+C, Copy, Paste, Undo, Redo, or Select all. Assignments survive app restarts. Shortcuts act on the focused Mac app; their meaning follows that app.
 
-Tap for one immediate input, or hold to repeat. Settings → Quick keys lets you adjust the hold delay (0.20–1.00 seconds, default 0.35) and Backspace speed (5–60 repetitions per second, default 30). Settings are saved on the iPhone and sent to the Mac over either connection. Update both apps to 1.4.23 or later to customize repetition.
+Tap for one immediate input, or hold to repeat. Settings → Quick keys lets you adjust the hold delay (0.20–1.00 seconds, default 0.35) and Key repeat speed (5–60 repetitions per second, default 30). Settings are saved on the iPhone and sent to the Mac over either connection. Update both apps to 1.4.26 or later to customize the shared repetition rate.
 
 Version 1.4.6 forwards the iPhone microphone to a virtual Mac input device. In the Mac window, choose **Settings…**, click **Connect** beside each receiving desktop app. Both connections stay saved. PocketTrackpad reads the app’s existing dictation preference or opens its settings to read the shortcut. If no shortcut is assigned, setup opens the app’s shortcut control so you can assign one there and read it again. It never edits the other app’s preference files or silently creates shortcuts.
 
@@ -45,7 +45,7 @@ Stop cancels the audio sender before sending the stop command; it does not wait 
 
 Disconnecting or leaving the phone app stops capture. The Mac attempts to stop the same GPT recording and restores the previous microphone only after that stop is confirmed. If confirmation fails during a session, it leaves a silent virtual input selected to avoid switching an active recording to a room microphone. Quitting the Mac receiver explicitly restores the prior system input, with a built-in microphone fallback; the installed virtual device remains listed in Sound settings. PocketTrackpad does not submit the resulting message.
 
-Hold Backspace to repeat deletion, as on a keyboard. Tab, Space, and arrow assignments can also repeat; Enter and shortcuts remain single actions.
+Hold a keyboard key to repeat it at your selected rate. Backspace, Enter, Tab, Space, arrows, and editing shortcuts use the same setting. Mission Control remains a single action; scroll keys use continuous scrolling.
 
 Use iPhone and Mac **1.3.0 or later** for the expanded customizable key set. Older receivers continue to support their original commands; unsupported keys prompt for a Mac update. Trackpad movement and existing gestures retain their existing transport path.
 
@@ -192,9 +192,13 @@ The release was checked with the focused repeat/wire tests and full core checks.
 - Direction-bound authentication, Bluetooth encryption, and Wi-Fi behavior are preserved.
 - The actual Mac discovery callback passes the unrelated-device regression test. All core checks pass; the iPhone archive and signed Mac build succeeded.
 
-## Current release: 1.4.25
+## Previous release: 1.4.25
 
 - Assign Mission Control, Scroll up, or Scroll down to any of the four quick keys.
 - Scroll buttons send one initial movement and continuous, time-based scrolling while held, ending immediately on release or input cancellation. Mission Control is a single tap action.
 - A dedicated native action list groups Mac actions, keyboard keys, and editing commands. Live connection updates do not rebuild the scrolling table.
 - Includes QR-scoped Bluetooth discovery from 1.4.24.
+
+## Current release: 1.4.26
+
+Quick keys now share one **Key repeat speed** setting (5–60 repetitions per second). It applies to held keyboard actions including Backspace, Enter, Tab, arrow keys, and editing shortcuts. The initial press remains immediate, and the repeat delay still controls when repetition starts. Existing Backspace speed preferences migrate to the new shared setting without changing the saved value. Mission Control remains a single-tap action; scroll buttons retain continuous scrolling. Update both apps to use the shared speed. Older receivers advertise no support, so the iPhone disables the shared speed control and displays update guidance.

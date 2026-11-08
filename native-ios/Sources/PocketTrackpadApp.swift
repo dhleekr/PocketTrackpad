@@ -266,10 +266,10 @@ private struct QuickKeySettings:View {
                     .disabled(client.ready && !client.supportsKeyRepeatTuning)
             } header:{Text(PTText("Key repeat"))} footer:{Text(PTText("A tap sends one key immediately. Repeating starts only after this hold time."))}
             Section {
-                SettingSlider(title:"Backspace speed",valueText:PTFormat("%.0f / s",client.backspaceRepeatRate),value:$client.backspaceRepeatRate,range:PadKeyRepeatTuning.rateRange,step:1)
-                    .disabled(client.ready && !client.supportsKeyRepeatTuning)
-                if client.ready && !client.supportsKeyRepeatTuning{Text(PTText("Update the Mac app to use these features.")).foregroundStyle(.secondary)}
-            }
+                SettingSlider(title:"Key repeat speed",valueText:PTFormat("%.0f / s",client.keyRepeatRate),value:$client.keyRepeatRate,range:PadKeyRepeatTuning.rateRange,step:1)
+                    .disabled(client.ready && !client.supportsUnifiedKeyRepeat)
+                if client.ready && !client.supportsUnifiedKeyRepeat{Text(PTText("Update the Mac app to use these features.")).foregroundStyle(.secondary)}
+            } footer:{Text(PTText("Applies to all keyboard keys that repeat while held."))}
             Section {Button(PTText("Restore default keys")){client.quickKeys=PadQuickKey.defaults}}
         }.navigationTitle(PTText("Quick keys"))
     }

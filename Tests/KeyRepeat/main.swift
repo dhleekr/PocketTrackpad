@@ -1,5 +1,12 @@
 import Foundation
 for key in PadQuickKey.allCases where key.keyCode != nil {
+ var unified=KeyRepeatState();unified.repeatRate=12
+ _ = unified.begin(key,at:0)
+ var count=0
+ for i in 1...500 {let now=Double(i)*0.004;unified.heartbeat(key,at:now);if unified.tick(at:now) != nil,now>=0.5 && now<1.5{count+=1}}
+ guard (11...13).contains(count) else{print("FAIL configured 12/s not applied to \(key) repeated \(count)/s");exit(1)}
+}
+for key in PadQuickKey.allCases where key.keyCode != nil {
  var state=KeyRepeatState()
  assert(state.begin(key,at:0),"every quick key must accept a held press: \(key)")
  assert(state.tick(at:0.1)==nil,"short taps must remain single presses")
@@ -9,7 +16,7 @@ for key in PadQuickKey.allCases where key.keyCode != nil {
   state.heartbeat(key,at:now)
   if state.tick(at:now) != nil,now>=0.5 && now<1.5{count+=1}
  }
- let expected=key == .backspace ? 30:60
+ let expected=30
  assert((expected-1...expected+1).contains(count),"held \(key) must maintain its constant rate")
  state.end(key);assert(state.tick(at:2.004)==nil,"release stops \(key)")
 }
@@ -17,7 +24,7 @@ var state=KeyRepeatState()
 assert(state.begin(.enter,at:0));assert(state.tick(at:0.51)==nil && state.key==nil,"lost connection must stop Enter too")
 assert(state.begin(.backspace,at:2));state.heartbeat(.backspace,at:9.9)
 assert(state.tick(at:10) == .backspace);assert(state.tick(at:10.001)==nil,"a delayed timer must not replay queued repetitions")
-print("PASS Backspace 30 Hz / other quick keys 60 Hz, immediate release, lost lease, no delayed burst")
+print("PASS all keyboard keys use the configured repetition rate, immediate release, lost lease, no delayed burst")
 
 var quick=KeyRepeatState()
 assert(quick.begin(.backspace,at:0))
@@ -50,7 +57,7 @@ assert(PadKeyRepeatTuning.delay(nil)==0.35 && PadKeyRepeatTuning.delay(.nan)==0.
 assert(PadKeyRepeatTuning.delay(0)==0.2 && PadKeyRepeatTuning.delay(9)==1)
 assert(PadKeyRepeatTuning.rate(nil)==30 && PadKeyRepeatTuning.rate(.infinity)==30)
 assert(PadKeyRepeatTuning.rate(1)==5 && PadKeyRepeatTuning.rate(999)==60)
-var configured=KeyRepeatState();configured.delay=0.8;configured.backspaceRate=10
+var configured=KeyRepeatState();configured.delay=0.8;configured.repeatRate=10
 assert(configured.begin(.backspace,at:0));configured.heartbeat(.backspace,at:0.7)
 assert(configured.tick(at:0.79)==nil && configured.tick(at:0.8) == .backspace)
 assert(configured.tick(at:0.89)==nil && configured.tick(at:0.9) == .backspace)
@@ -60,4 +67,22 @@ tapRepeater.handle(.backspace,phase:"began")
 Thread.sleep(forTimeInterval:0.12)
 tapRepeater.handle(.backspace,phase:"ended")
 tapOutput.lock.lock();assert(tapOutput.first != nil && tapOutput.times.isEmpty,"a 120 ms tap must send one down without repeated deletion");tapOutput.lock.unlock()
-print("PASS short tap once, configurable hold threshold and Backspace rate, safe defaults and bounds")
+print("PASS short tap once, configurable hold threshold and shared key rate, safe defaults and bounds")
+
+let preferenceSuite="PocketTrackpadUnifiedRepeat-"+UUID().uuidString
+let preferences=UserDefaults(suiteName:preferenceSuite)!
+defer{preferences.removePersistentDomain(forName:preferenceSuite)}
+preferences.set(12.0,forKey:"pad.backspaceRepeatRate")
+assert(PadKeyRepeatTuning.savedRate(in:preferences)==12,"retain the previous Backspace speed as the initial shared speed")
+assert(preferences.double(forKey:PadKeyRepeatTuning.ratePreferenceKey)==12)
+preferences.set(25.0,forKey:PadKeyRepeatTuning.ratePreferenceKey)
+assert(PadKeyRepeatTuning.savedRate(in:preferences)==25,"the new setting must override the legacy fallback after migration")
+assert(preferences.double(forKey:"pad.backspaceRepeatRate")==12,"leave the legacy setting intact for rollback")
+let enterOutput=OutputTiming(),enterRepeater=MacKeyRepeater(deliver:enterOutput.record)
+let enterBegan=ProcessInfo.processInfo.systemUptime
+enterRepeater.handle(.enter,phase:"began",repeatRate:12)
+for _ in 0..<16{Thread.sleep(forTimeInterval:0.1);enterRepeater.handle(.enter,phase:"changed")}
+enterRepeater.handle(.enter,phase:"ended")
+enterOutput.lock.lock();let enters=enterOutput.times.filter{$0>=enterBegan+0.5 && $0<enterBegan+1.5};enterOutput.lock.unlock()
+assert((10...14).contains(enters.count),"a real held Enter must honor the shared 12/s rate")
+print("PASS legacy preference migration, new setting precedence, and production Enter at \(enters.count)/s")

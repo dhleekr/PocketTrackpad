@@ -349,3 +349,7 @@
 "Scroll down" = "아래로 스크롤";
 
 "Mission Control" = "미션 컨트롤";
+
+"Key repeat speed" = "키 반복 속도";
+
+"Applies to all keyboard keys that repeat while held." = "길게 누르면 반복되는 모든 키보드 키에 적용됩니다.";

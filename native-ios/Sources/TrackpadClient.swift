@@ -48,7 +48,7 @@ import UIKit
     @Published var sensitivity=1.6 {didSet{UserDefaults.standard.set(sensitivity,forKey:"pad.sensitivity")}}
     @Published var doubleTapInterval=0.5 {didSet{UserDefaults.standard.set(doubleTapInterval,forKey:"pad.doubleTapInterval")}}
     @Published var keyRepeatDelay=PadKeyRepeatTuning.defaultDelay {didSet{UserDefaults.standard.set(keyRepeatDelay,forKey:"pad.keyRepeatDelay")}}
-    @Published var backspaceRepeatRate=PadKeyRepeatTuning.defaultRate {didSet{UserDefaults.standard.set(backspaceRepeatRate,forKey:"pad.backspaceRepeatRate")}}
+    @Published var keyRepeatRate=PadKeyRepeatTuning.defaultRate {didSet{UserDefaults.standard.set(keyRepeatRate,forKey:PadKeyRepeatTuning.ratePreferenceKey)}}
     @Published var pressDelay=0.16 {didSet{UserDefaults.standard.set(pressDelay,forKey:"pad.pressDelay")}}
     @Published var hapticTap=UserDefaults.standard.object(forKey:"pad.haptic.tap") as? Bool ?? true {didSet{UserDefaults.standard.set(hapticTap,forKey:"pad.haptic.tap")}}
     @Published var hapticPress=UserDefaults.standard.object(forKey:"pad.haptic.press") as? Bool ?? true {didSet{UserDefaults.standard.set(hapticPress,forKey:"pad.haptic.press")}}
@@ -70,7 +70,7 @@ import UIKit
         doubleTapInterval=PadTuning.saved("pad.doubleTapInterval",default:0.5,range:PadTuning.doubleTapRange)
         sensitivity=PadTuning.saved("pad.sensitivity",default:1.6,range:PadTuning.speedRange)
         keyRepeatDelay=PadTuning.saved("pad.keyRepeatDelay",default:PadKeyRepeatTuning.defaultDelay,range:PadKeyRepeatTuning.delayRange)
-        backspaceRepeatRate=PadTuning.saved("pad.backspaceRepeatRate",default:PadKeyRepeatTuning.defaultRate,range:PadKeyRepeatTuning.rateRange)
+        keyRepeatRate=PadKeyRepeatTuning.savedRate()
         pressDelay=PadTuning.saved("pad.pressDelay",default:0.16,range:PadTuning.pressRange)
         wifi.$ready.removeDuplicates().sink{[weak self] v in guard let self,self.transport == .wifi else{return};self.updateReady(v)}.store(in:&subscriptions)
         wifi.$message.throttle(for:.milliseconds(200),scheduler:RunLoop.main,latest:true).sink{[weak self] v in guard let self,self.transport == .wifi else{return};self.message=v}.store(in:&subscriptions)
@@ -104,7 +104,7 @@ import UIKit
         }
         // Send pointer release and key-down together so the first key does not
         // wait behind a separate Bluetooth write or Wi-Fi send completion.
-        send([PadEvent(type:"up"),PadEvent(type:"key",phase:"began",name:key.rawValue,repeatDelay:supportsKeyRepeatTuning ? PadKeyRepeatTuning.delay(keyRepeatDelay):nil,repeatRate:supportsKeyRepeatTuning && key == .backspace ? PadKeyRepeatTuning.rate(backspaceRepeatRate):nil)])
+        send([PadEvent(type:"up"),PadEvent(type:"key",phase:"began",name:key.rawValue,repeatDelay:supportsKeyRepeatTuning ? PadKeyRepeatTuning.delay(keyRepeatDelay):nil,repeatRate:supportsUnifiedKeyRepeat || (supportsKeyRepeatTuning && key == .backspace) ? PadKeyRepeatTuning.rate(keyRepeatRate):nil)])
         let timer=Timer(timeInterval:0.15,repeats:true){[weak self] _ in Task{@MainActor in
             guard let self,let key=self.heldKey else{return};self.send([PadEvent(type:"key",phase:"changed",name:key.rawValue)])
         }}
@@ -119,6 +119,7 @@ import UIKit
     }
     func releaseInput(){endKey();send([PadEvent(type:"up")])}
     var supportsKeyRepeatTuning:Bool {transport == .wifi ? wifi.keyRepeatTuning:reverse.keyRepeatTuning}
+    var supportsUnifiedKeyRepeat:Bool {transport == .wifi ? wifi.unifiedKeyRepeat:reverse.unifiedKeyRepeat}
     var continuousSystemGestures:Bool {transport == .wifi ? wifi.continuousSystemGestures:reverse.continuousSystemGestures}
     var supportsRemoteMicrophone:Bool {transport == .wifi ? wifi.remoteMicrophone:reverse.bluetoothMicrophone}
     func makeMicrophoneConnection()throws->any MicrophoneConnection {
