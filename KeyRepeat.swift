@@ -7,7 +7,7 @@ struct KeyRepeatState {
     private var next=0.0,pulse=0.0
     var delay=PadKeyRepeatTuning.defaultDelay,interval=1.0/60.0,backspaceRate=PadKeyRepeatTuning.defaultRate
     mutating func begin(_ key:PadQuickKey,at now:Double)->Bool {
-        guard key.repeatable,now.isFinite else{return false}
+        guard key.keyCode != nil,key.repeatable,now.isFinite else{return false}
         self.key=key;pulse=now;next=now+delay;return true
     }
     mutating func heartbeat(_ key:PadQuickKey,at now:Double){if self.key==key,now.isFinite{pulse=now}}

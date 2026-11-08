@@ -40,7 +40,12 @@ struct PocketTrackpadApp:App {
     }
 }
 
-private enum SettingsPage:Hashable {case connection,clicks,haptics,gestures,keys,microphone,appearance,about}
+private enum SettingsPage:Hashable {
+    case connection,clicks,haptics,gestures,keys,microphone,appearance,about
+    #if DEBUG
+    case keyActions
+    #endif
+}
 struct SettingsSheet:View {
     @ObservedObject var client:TrackpadClient
     @State private var scanning=false
@@ -100,6 +105,9 @@ struct SettingsSheet:View {
                 switch page {
                 case .connection:ConnectionSettings(client:client)
                 case .keys:QuickKeySettings(client:client)
+                #if DEBUG
+                case .keyActions:QuickKeyActionScreen(selected:client.quickKeys[0],title:PTFormat("Key %d",1)){client.quickKeys[0]=$0}
+                #endif
                 case .microphone:MicrophoneSettings(speech:client.speech)
                 case .appearance:ControlVisibilitySettings(client:client)
                 case .clicks:ClickSettings(client:client)
@@ -122,6 +130,7 @@ struct SettingsSheet:View {
             if path.isEmpty,let argument=arguments.first(where:{$0.hasPrefix("--ui-test-page=")}) {
                 switch argument.split(separator:"=").last {
                 case "keys":path=[.keys]
+                case "key-actions":path=[.keys,.keyActions]
                 case "microphone":path=[.microphone]
                 case "appearance":path=[.appearance]
                 case "clicks":path=[.clicks]
@@ -241,8 +250,14 @@ private struct QuickKeySettings:View {
         Form {
             Section(PTText("Choose an action for each key")) {
                 ForEach(0..<4,id:\.self){index in
-                    Picker(PTFormat("Key %d",index+1),selection:Binding(get:{client.quickKeys[index]},set:{client.quickKeys[index]=$0})) {
-                        ForEach(PadQuickKey.allCases,id:\.self){key in Text(PTText(key.accessibilityTitle)).tag(key)}
+                    NavigationLink {
+                        QuickKeyActionScreen(selected:client.quickKeys[index],title:PTFormat("Key %d",index+1)){client.quickKeys[index]=$0}
+                    } label:{
+                        HStack {
+                            Text(PTFormat("Key %d",index+1))
+                            Spacer()
+                            Text(PTText(client.quickKeys[index].accessibilityTitle)).foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -257,6 +272,66 @@ private struct QuickKeySettings:View {
             }
             Section {Button(PTText("Restore default keys")){client.quickKeys=PadQuickKey.defaults}}
         }.navigationTitle(PTText("Quick keys"))
+    }
+}
+
+/// The action list owns its native scrolling. Live connection/latency updates
+/// can update the enclosing settings without rebuilding this table or its menu.
+private struct QuickKeyActionScreen:View {
+    let selected:PadQuickKey
+    let title:String
+    let choose:(PadQuickKey)->Void
+    var body:some View {
+        VStack(spacing:0){QuickKeyActionPicker(selected:selected,title:title,choose:choose)}
+            .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+    }
+}
+private struct QuickKeyActionPicker:UIViewControllerRepresentable {
+    let selected:PadQuickKey
+    let title:String
+    let choose:(PadQuickKey)->Void
+    @Environment(\.dismiss) private var dismiss
+    func makeUIViewController(context:Context)->QuickKeyActionController {
+        QuickKeyActionController(selected:selected,title:title){key in choose(key);dismiss()}
+    }
+    func updateUIViewController(_ controller:QuickKeyActionController,context:Context){
+        controller.choose={key in choose(key);dismiss()}
+        controller.setSelection(selected)
+    }
+}
+private final class QuickKeyActionController:UITableViewController {
+    private var selected:PadQuickKey
+    var choose:(PadQuickKey)->Void
+    init(selected:PadQuickKey,title:String,choose:@escaping(PadQuickKey)->Void){
+        self.selected=selected;self.choose=choose;super.init(style:.insetGrouped);self.title=title
+    }
+    required init?(coder:NSCoder){fatalError("Programmatic controller")}
+    override func viewDidLoad(){
+        super.viewDidLoad()
+        tableView.rowHeight=UITableView.automaticDimension;tableView.estimatedRowHeight=48
+        tableView.register(UITableViewCell.self,forCellReuseIdentifier:"action")
+        tableView.accessibilityIdentifier="quickKeys.actions"
+    }
+    func setSelection(_ value:PadQuickKey){
+        guard selected != value else{return};selected=value
+        for path in tableView.indexPathsForVisibleRows ?? [] {
+            tableView.cellForRow(at:path)?.accessoryType=PadQuickKey.groups[path.section].keys[path.row]==selected ? .checkmark:.none
+        }
+    }
+    override func numberOfSections(in tableView:UITableView)->Int {PadQuickKey.groups.count}
+    override func tableView(_ tableView:UITableView,numberOfRowsInSection section:Int)->Int {PadQuickKey.groups[section].keys.count}
+    override func tableView(_ tableView:UITableView,titleForHeaderInSection section:Int)->String? {PTText(PadQuickKey.groups[section].title)}
+    override func tableView(_ tableView:UITableView,cellForRowAt indexPath:IndexPath)->UITableViewCell {
+        let key=PadQuickKey.groups[indexPath.section].keys[indexPath.row]
+        let cell=tableView.dequeueReusableCell(withIdentifier:"action",for:indexPath)
+        var content=cell.defaultContentConfiguration();content.text=PTText(key.accessibilityTitle)
+        cell.contentConfiguration=content;cell.accessoryType=key==selected ? .checkmark:.none
+        cell.accessibilityIdentifier="quickKeys.action."+key.rawValue
+        return cell
+    }
+    override func tableView(_ tableView:UITableView,didSelectRowAt indexPath:IndexPath){
+        let key=PadQuickKey.groups[indexPath.section].keys[indexPath.row]
+        setSelection(key);choose(key)
     }
 }
 

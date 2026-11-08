@@ -280,8 +280,8 @@ final class PadController:UIViewController {
     @objc private func unlockHeld(_ recognizer:UILongPressGestureRecognizer){if recognizer.state == .began,client.protected{client.toggleProtection()}}
     @objc private func rotateTapped(){pad?.cancelForRotation();client.toggleOrientation();armControlsDismiss()}
     private func configureKey(_ button:UIButton,key:PadQuickKey){
-        button.setTitle(key == .backspace ? nil:key.title,for:.normal)
-        button.setImage(key == .backspace ? UIImage(systemName:"delete.left",withConfiguration:UIImage.SymbolConfiguration(pointSize:18,weight:.regular)):nil,for:.normal)
+        button.setTitle(key.symbolName == nil ? key.title:nil,for:.normal)
+        button.setImage(key.symbolName.flatMap{UIImage(systemName:$0,withConfiguration:UIImage.SymbolConfiguration(pointSize:18,weight:.regular))},for:.normal)
         button.accessibilityLabel=PTText(key.accessibilityTitle);button.accessibilityIdentifier="pad.key."+key.rawValue
     }
     @objc private func keyPressed(_ button:UIButton){

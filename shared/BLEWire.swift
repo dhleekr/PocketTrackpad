@@ -12,7 +12,7 @@ enum BLEWire {
     static let maxFrame=16384
     static func valid(_ events:[[String:Any]])->Bool {
         let types:Set<String>=["move","scroll","magnify","dockSwipe","click","double","right","down","up","shortcut","status","text","rotate","smartZoom","key"]
-        let shortcuts=Set(["mission","appWindows","desktopLeft","desktopRight","notifications","apps","showDesktop","lookup"]+PadQuickKey.allCases.map(\.rawValue))
+        let shortcuts=Set(["mission","appWindows","desktopLeft","desktopRight","notifications","apps","showDesktop","lookup"]+PadQuickKey.allCases.filter{$0.keyCode != nil}.map(\.rawValue))
         guard (1...64).contains(events.count) else {return false}
         for e in events {
             guard let t=e["type"] as? String,types.contains(t) else {return false}
@@ -29,7 +29,7 @@ enum BLEWire {
                     let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
             }
             if t=="key" {
-                guard let name=e["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable,
+                guard let name=e["name"] as? String,let key=PadQuickKey(rawValue:name),key.keyCode != nil,key.repeatable,
                     let phase=e["phase"] as? String,["began","changed","ended","cancelled"].contains(phase) else{return false}
                 for (field,range) in [("repeatDelay",PadKeyRepeatTuning.delayRange),("repeatRate",PadKeyRepeatTuning.rateRange)] {
                     if let value=e[field] {
@@ -51,6 +51,21 @@ enum BLEWire {
             if let n=e["count"] {guard let v=n as? NSNumber,CFGetTypeID(v) != CFBooleanGetTypeID(),[1.0,2.0].contains(v.doubleValue) else {return false}}
         }
         return true
+    }
+}
+
+// A QR-specific rendezvous prevents unrelated Macs from initiating an encrypted
+// GATT subscription (and triggering an OS pairing prompt) before authentication.
+// This opaque identifier is only a discovery filter; mutual proofs remain required.
+enum BLEDiscovery {
+    static func service(token:String?)->String? {
+        guard let token,token.utf8.count>=32 else{return nil}
+        var bytes=Array(HMAC<SHA256>.authenticationCode(for:Data("PocketTrackpad/discovery/v1".utf8),using:SymmetricKey(data:Data(token.utf8))).prefix(16))
+        bytes[6]=(bytes[6] & 0x0f) | 0x80
+        bytes[8]=(bytes[8] & 0x3f) | 0x80
+        let hex=bytes.map{String(format:"%02X",$0)}.joined()
+        let cuts=[0,8,12,16,20,32]
+        return zip(cuts,cuts.dropFirst()).map {a,b in String(hex.dropFirst(a).prefix(b-a))}.joined(separator:"-")
     }
 }
 
@@ -188,9 +203,10 @@ enum PadKeyRepeatTuning {
 }
 
 enum PadQuickKey:String,CaseIterable {
-    case escape,tab,shiftTab,backspace,enter,space,up,down,left,right,interrupt,copy,paste,undo,redo,selectAll
+    case escape,tab,shiftTab,backspace,enter,space,up,down,left,right,interrupt,copy,paste,undo,redo,selectAll,mission,scrollUp,scrollDown
     static let defaults:[Self]=[.escape,.tab,.backspace,.enter]
     var title:String {switch self {
+    case .mission:return "Mission Control";case .scrollUp:return "Scroll up";case .scrollDown:return "Scroll down"
     case .escape:return "Esc";case .tab:return "Tab";case .shiftTab:return "⇧ Tab"
     case .backspace:return "⌫";case .enter:return "Enter";case .space:return "Space"
     case .up:return "↑";case .down:return "↓";case .left:return "←";case .right:return "→"
@@ -204,12 +220,20 @@ enum PadQuickKey:String,CaseIterable {
     case .undo:return "Undo";case .redo:return "Redo";case .selectAll:return "Select all"
     default:return title
     }}
-    var keyCode:UInt16 {switch self {
+    var keyCode:UInt16? {switch self {
+    case .mission,.scrollUp,.scrollDown:return nil
     case .escape:return 53;case .tab,.shiftTab:return 48;case .backspace:return 51;case .enter:return 36
     case .space:return 49;case .up:return 126;case .down:return 125;case .left:return 123;case .right:return 124
     case .interrupt,.copy:return 8;case .paste:return 9;case .undo,.redo:return 6;case .selectAll:return 0
     }}
-    var repeatable:Bool {true}
+    var repeatable:Bool {self != .mission}
+    var scrollDirection:Double? {self == .scrollUp ? 1:self == .scrollDown ? -1:nil}
+    var symbolName:String? {switch self {case .backspace:return "delete.left";case .mission:return "rectangle.3.group";case .scrollUp:return "arrow.up.circle";case .scrollDown:return "arrow.down.circle";default:return nil}}
+    static let groups:[(title:String,keys:[Self])]=[
+        ("Mac actions",[.mission,.scrollUp,.scrollDown]),
+        ("Keyboard",[.escape,.tab,.shiftTab,.backspace,.enter,.space,.up,.down,.left,.right]),
+        ("Editing",[.interrupt,.copy,.paste,.undo,.redo,.selectAll])
+    ]
     var shift:Bool {self == .shiftTab || self == .redo}
     var command:Bool {[Self.copy,.paste,.undo,.redo,.selectAll].contains(self)}
     var control:Bool {self == .interrupt}
@@ -218,4 +242,20 @@ enum PadQuickKey:String,CaseIterable {
         guard let values,values.count==4 else{return defaults}
         return values.enumerated().map{Self(rawValue:$0.element) ?? defaults[$0.offset]}
     }
+}
+
+/// A held scroll button integrates elapsed time and drops stalled time, avoiding
+/// bursts after a delayed timer. Ending always clears the previous direction.
+struct QuickKeyScrollState {
+    private(set) var key:PadQuickKey?
+    private var previous=0.0
+    mutating func begin(_ key:PadQuickKey,at now:Double)->Double? {
+        guard let direction=key.scrollDirection,now.isFinite else{return nil}
+        self.key=key;previous=now;return direction*32
+    }
+    mutating func tick(at now:Double)->Double? {
+        guard let direction=key?.scrollDirection,now.isFinite,now>previous else{return nil}
+        let elapsed=min(now-previous,1.0/30);previous=now;return direction*480*elapsed
+    }
+    mutating func end(){key=nil}
 }

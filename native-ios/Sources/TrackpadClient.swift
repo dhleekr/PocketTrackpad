@@ -87,10 +87,21 @@ import UIKit
     }
     private var heldKey:PadQuickKey?
     private var keyHeartbeat:Timer?
+    private var quickScroll=QuickKeyScrollState()
     func beginKey(_ key:PadQuickKey){
         guard ready,key.repeatable else{return}
         guard transport == .wifi ? wifi.gestureOptions:reverse.gestureOptions else{message=PTText("Update the Mac app to use these features.");showConnection=true;return}
         endKey();heldKey=key
+        if let delta=quickScroll.begin(key,at:ProcessInfo.processInfo.systemUptime) {
+            send([PadEvent(type:"up"),PadEvent(type:"scroll",x:0,y:delta,phase:"began",name:"contentOnly")])
+            let timer=Timer(timeInterval:1.0/60,repeats:true){[weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self,self.ready,let delta=self.quickScroll.tick(at:ProcessInfo.processInfo.systemUptime) else{return}
+                    self.send([PadEvent(type:"scroll",x:0,y:delta,phase:"changed",name:"contentOnly")])
+                }
+            }
+            keyHeartbeat=timer;RunLoop.main.add(timer,forMode:.common);return
+        }
         // Send pointer release and key-down together so the first key does not
         // wait behind a separate Bluetooth write or Wi-Fi send completion.
         send([PadEvent(type:"up"),PadEvent(type:"key",phase:"began",name:key.rawValue,repeatDelay:supportsKeyRepeatTuning ? PadKeyRepeatTuning.delay(keyRepeatDelay):nil,repeatRate:supportsKeyRepeatTuning && key == .backspace ? PadKeyRepeatTuning.rate(backspaceRepeatRate):nil)])
@@ -102,7 +113,9 @@ import UIKit
     func endKey(_ key:PadQuickKey?=nil){
         guard let heldKey,key==nil || heldKey==key else{return}
         keyHeartbeat?.invalidate();keyHeartbeat=nil;self.heldKey=nil
-        send([PadEvent(type:"key",phase:"ended",name:heldKey.rawValue)])
+        if heldKey.scrollDirection != nil {
+            quickScroll.end();send([PadEvent(type:"scroll",x:0,y:0,phase:"ended",name:"contentOnly")])
+        }else{send([PadEvent(type:"key",phase:"ended",name:heldKey.rawValue)])}
     }
     func releaseInput(){endKey();send([PadEvent(type:"up")])}
     var supportsKeyRepeatTuning:Bool {transport == .wifi ? wifi.keyRepeatTuning:reverse.keyRepeatTuning}

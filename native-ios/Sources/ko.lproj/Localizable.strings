@@ -337,3 +337,15 @@
 "A tap sends one key immediately. Repeating starts only after this hold time." = "탭하면 즉시 한 번 입력합니다. 설정한 시간보다 길게 누르면 반복 입력을 시작합니다.";
 
 "%.0f / s" = "초당 %.0f회";
+
+"Mac actions" = "Mac 동작";
+
+"Keyboard" = "키보드";
+
+"Editing" = "편집";
+
+"Scroll up" = "위로 스크롤";
+
+"Scroll down" = "아래로 스크롤";
+
+"Mission Control" = "미션 컨트롤";

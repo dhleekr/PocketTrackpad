@@ -6,7 +6,7 @@
 
 An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and switch desktops over Wi-Fi or Bluetooth. A nearly empty touch surface with four customizable keys—Esc, Tab, Backspace, Enter by default—and a microphone. Built for short instructions and hands-on control of desktop tools such as Codex and Claude Code.
 
-[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.23.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
+[Website](https://pocket-trackpad.doohyun726675.chatgpt.site/) · [Download for Mac](https://pocket-trackpad.doohyun726675.chatgpt.site/downloads/PocketTrackpad-Mac-1.4.25.dmg) · [Setup & support](https://pocket-trackpad.doohyun726675.chatgpt.site/support.html) · [Privacy](https://pocket-trackpad.doohyun726675.chatgpt.site/privacy.html)
 
 ![PocketTrackpad identity: Your Mac. In your hand.](docs/assets/cover.png)
 
@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.23 (66).
+1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.25 (68).
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. Open the Mac DMG and drag PocketTrackpad to Applications. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -169,7 +169,13 @@ Mac 1.4.9 improves vertical scrolling with a source-time speed curve and a small
 
 Mac 1.4.12 keeps active microphone sessions running across app focus changes, uses Codex’s assigned single-tap dictation shortcut, and prefers Claude’s Dictate and Finish controls. Start, background recording, and stop were verified locally in both target apps. App versions and accessibility exposure can affect compatibility. The iPhone 1.4.12 release packages the existing controller with the current companion setup; these microphone fixes are in the Mac receiver.
 
-## Current release: 1.4.23
+## Bluetooth pairing isolation (1.4.24)
+
+Install 1.4.24 or later on both the iPhone and Mac for Bluetooth. Discovery uses an opaque service identifier derived from the existing Mac QR pairing key. The Mac checks this identifier before connecting, so another user's nearby PocketTrackpad phone does not trigger an encryption or pairing attempt. The phone advertises only that QR-specific service; there is no fallback to the shared legacy service. Mutual QR authentication and Bluetooth link encryption remain required after discovery.
+
+The saved QR pairing key is unchanged. Wi-Fi remains compatible with existing versions. Bluetooth requires the matching update on both devices.
+
+## Previous release: 1.4.23
 
 - One immediate key press per short tap, with a configurable hold delay and Backspace repeat speed.
 - Held keys keep a continuous down/repeat/up sequence and release on lift or connection loss.
@@ -178,3 +184,17 @@ Mac 1.4.12 keeps active microphone sessions running across app focus changes, us
 - Includes the previous improvements to microphone continuity, scrolling, and window handling.
 
 The release was checked with the focused repeat/wire tests and full core checks. The user verified the final iPhone and Mac behavior before publication. Desktop-app and macOS compatibility limits described above still apply.
+
+## Previous release: 1.4.24
+
+- QR-scoped Bluetooth discovery filters out unrelated nearby devices before initiating a connection or encrypted GATT subscription.
+- Both the iPhone controller and Mac companion must be 1.4.24 or later for Bluetooth. Existing QR pairing keys are retained; no legacy shared-service fallback is used.
+- Direction-bound authentication, Bluetooth encryption, and Wi-Fi behavior are preserved.
+- The actual Mac discovery callback passes the unrelated-device regression test. All core checks pass; the iPhone archive and signed Mac build succeeded.
+
+## Current release: 1.4.25
+
+- Assign Mission Control, Scroll up, or Scroll down to any of the four quick keys.
+- Scroll buttons send one initial movement and continuous, time-based scrolling while held, ending immediately on release or input cancellation. Mission Control is a single tap action.
+- A dedicated native action list groups Mac actions, keyboard keys, and editing commands. Live connection updates do not rebuild the scrolling table.
+- Includes QR-scoped Bluetooth discovery from 1.4.24.

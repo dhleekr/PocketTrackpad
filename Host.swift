@@ -154,7 +154,7 @@ final class InputEngine {
                     if dockAxis==9{_ = PocketPostNotification(x,delta,y,nativePhase)}else if dockAxis==2{_ = PocketPostDockMotion(x,delta,y,dockAxis,nativePhase)}else{_ = PocketPostDock(x,y,dockAxis,nativePhase)}
                     if phase=="ended" || phase=="cancelled" {dockAxis=0;dockProgress=0}
                 }
-            }else if kind == "key",let name=d["name"] as? String,let key=PadQuickKey(rawValue:name),key.repeatable {
+            }else if kind == "key",let name=d["name"] as? String,let key=PadQuickKey(rawValue:name),key.keyCode != nil,key.repeatable {
                 keyRepeater.handle(key,phase:d["phase"] as? String ?? "cancelled",repeatDelay:d["repeatDelay"] as? Double,repeatRate:d["repeatRate"] as? Double)
             }else if kind == "smartZoom" {_ = PocketPostSmartZoom()
             }else if kind == "rotate" {
@@ -216,7 +216,7 @@ final class InputEngine {
                     "left":(123,[]), "right":(124,[]), "up":(126,[]), "down":(125,[]),
                     "spotlight":(49,.maskCommand), "showDesktop":(103,[]), "switchApp":(48,.maskCommand),
                     "play":(49,[]), "lookup":(2,[.maskControl,.maskCommand]) ]
-                if let key=PadQuickKey(rawValue:name){
+                if let key=PadQuickKey(rawValue:name),key.keyCode != nil{
                     for event in MacQuickKeys.events(for:key){event.post(tap:.cghidEventTap)}
                 } else if ["notifications","apps"].contains(name){
                     MacSystemActions.perform(name)

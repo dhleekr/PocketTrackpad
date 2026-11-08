@@ -83,7 +83,7 @@ test("keyboard chunks round-trip unicode without splitting surrogate pairs") {
  return chunks.allSatisfy{$0.count<=20 && String(decoding:$0,as:UTF16.self).utf16.count==$0.count} && chunks.map{String(decoding:$0,as:UTF16.self)}.joined()==value
 }
 test("default interface is Escape Tab Backspace Enter in order") {
- PadQuickKey.defaults.map(\.rawValue)==["escape","tab","backspace","enter"] && PadQuickKey.allCases.allSatisfy{BLEWire.valid([["type":"shortcut","name":$0.rawValue]])}
+ PadQuickKey.defaults.map(\.rawValue)==["escape","tab","backspace","enter"] && PadQuickKey.allCases.filter{$0.keyCode != nil}.allSatisfy{BLEWire.valid([["type":"shortcut","name":$0.rawValue]])}
 }
 test("Shift-Tab posts Tab with Shift while plain Tab has no modifier") {
  PadQuickKey.shiftTab.keyCode==48 && PadQuickKey.shiftTab.shift && PadQuickKey.tab.keyCode==48 && !PadQuickKey.tab.shift && !PadQuickKey.enter.shift && !PadQuickKey.escape.shift
@@ -101,5 +101,16 @@ test("invalid repeat settings never reach the input engine") {
  } && !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatRate":61.0]]) && !BLEWire.valid([["type":"key","phase":"began","name":"backspace","repeatDelay":0.05]])
 }
 test("older phones can omit repeat settings") {BLEWire.valid([["type":"key","phase":"began","name":"backspace"]])}
+test("QR discovery is deterministic and isolated between users") {
+ let own=BLEDiscovery.service(token:key),other=BLEDiscovery.service(token:String(repeating:"b",count:32))
+ return own != nil && own == BLEDiscovery.service(token:key) && own != other && own != BLEWire.reverseService && UUID(uuidString:own!) != nil
+}
+test("missing and short QR secrets never advertise or scan") {
+ BLEDiscovery.service(token:nil) == nil && BLEDiscovery.service(token:"") == nil && BLEDiscovery.service(token:String(repeating:"a",count:31)) == nil
+}
+test("different QR identities cannot share a discovery service") {
+ let ids=(0..<256).compactMap{BLEDiscovery.service(token:String(format:"%064x",$0))}
+ return ids.count==256 && Set(ids).count==256
+}
 print("BLE protocol checks: \(passed) passed, \(failed) failed")
 exit(failed==0 ? 0:1)

@@ -62,20 +62,20 @@ import Combine
         else {ready=false;message=peripheral.state == .unauthorized ? PTText("Allow PocketTrackpad to use Bluetooth in Settings."):PTText("Turn on Bluetooth.")}
     }
     private func advertise(){
-        guard let manager,enabled,manager.state == .poweredOn else{return}
+        guard let manager,enabled,manager.state == .poweredOn,let serviceID=BLEDiscovery.service(token:token) else{return}
         diagnostics?.record(.bleAdvertise)
         advertiseStarted=Date();clearSession();manager.stopAdvertising();manager.removeAllServices()
         input=CBMutableCharacteristic(type:CBUUID(string:BLEWire.input),properties:[.notifyEncryptionRequired],value:nil,permissions:[])
         reply=CBMutableCharacteristic(type:CBUUID(string:BLEWire.reply),properties:[.write,.writeWithoutResponse],value:nil,permissions:[.writeEncryptionRequired])
         microphoneInput=CBMutableCharacteristic(type:CBUUID(string:BLEWire.microphoneInput),properties:[.notifyEncryptionRequired],value:nil,permissions:[])
         microphoneReply=CBMutableCharacteristic(type:CBUUID(string:BLEWire.microphoneReply),properties:[.write,.writeWithoutResponse],value:nil,permissions:[.writeEncryptionRequired])
-        let service=CBMutableService(type:CBUUID(string:BLEWire.reverseService),primary:true);service.characteristics=[input!,reply!,microphoneInput!,microphoneReply!];manager.add(service)
+        let service=CBMutableService(type:CBUUID(string:serviceID),primary:true);service.characteristics=[input!,reply!,microphoneInput!,microphoneReply!];manager.add(service)
         message=PTText("Keep the Mac app open. Waiting for Bluetooth…")
     }
     func peripheralManager(_ peripheral:CBPeripheralManager,didAdd service:CBService,error:Error?){
-        guard peripheral === manager,enabled else{return}
+        guard peripheral === manager,enabled,let serviceID=BLEDiscovery.service(token:token),service.uuid==CBUUID(string:serviceID) else{return}
         guard error==nil else{message=PTText("Could not start the Bluetooth service.");return}
-        peripheral.startAdvertising([CBAdvertisementDataServiceUUIDsKey:[CBUUID(string:BLEWire.reverseService)],CBAdvertisementDataLocalNameKey:"PocketTrackpad iPhone"])
+        peripheral.startAdvertising([CBAdvertisementDataServiceUUIDsKey:[CBUUID(string:serviceID)],CBAdvertisementDataLocalNameKey:"PocketTrackpad iPhone"])
     }
     func peripheralManagerDidStartAdvertising(_ peripheral:CBPeripheralManager,error:Error?){
         guard peripheral === manager,enabled else{return}

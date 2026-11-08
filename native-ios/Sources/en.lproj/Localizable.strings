@@ -337,3 +337,15 @@
 "A tap sends one key immediately. Repeating starts only after this hold time." = "A tap sends one key immediately. Repeating starts only after this hold time.";
 
 "%.0f / s" = "%.0f / s";
+
+"Mac actions" = "Mac actions";
+
+"Keyboard" = "Keyboard";
+
+"Editing" = "Editing";
+
+"Scroll up" = "Scroll up";
+
+"Scroll down" = "Scroll down";
+
+"Mission Control" = "Mission Control";

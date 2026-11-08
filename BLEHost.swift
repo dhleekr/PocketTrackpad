@@ -6,6 +6,7 @@ import ApplicationServices
 final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegate {
     private var central:CBCentralManager!
     private var peer:CBPeripheral?
+    private var peerService:CBUUID?
     private var input:CBCharacteristic?,reply:CBCharacteristic?,microphoneInput:CBCharacteristic?,microphoneReply:CBCharacteristic?
     private var microphoneBuffer=PadFrameDecoder(),microphoneCipher:BLEMicrophoneCipher?,microphoneWrites=MicrophoneBLEQueue()
     private var buffer=BLEFrames(),writes=[Data]()
@@ -34,18 +35,26 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
     func centralManagerDidUpdateState(_ central:CBCentralManager){
         if central.state == .poweredOn {scan()} else {close("Bluetooth unavailable")}
     }
-    private func scan(){guard central.state == .poweredOn,peer==nil else{return};central.scanForPeripherals(withServices:[CBUUID(string:BLEWire.reverseService)],options:[CBCentralManagerScanOptionAllowDuplicatesKey:true])}
+    private func scan(){
+        guard central.state == .poweredOn,peer==nil else{return}
+        guard let service=BLEDiscovery.service(token:token) else{central.stopScan();return}
+        central.scanForPeripherals(withServices:[CBUUID(string:service)],options:[CBCentralManagerScanOptionAllowDuplicatesKey:true])
+    }
     func centralManager(_ central:CBCentralManager,didDiscover peripheral:CBPeripheral,advertisementData:[String:Any],rssi RSSI:NSNumber){
-        guard peer==nil,Date().timeIntervalSince(attempted[peripheral.identifier] ?? .distantPast)>10 else{return}
+        guard peer==nil,let service=BLEDiscovery.service(token:token) else{return}
+        let expected=CBUUID(string:service)
+        let advertised=advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []
+        guard advertised.contains(expected),Date().timeIntervalSince(attempted[peripheral.identifier] ?? .distantPast)>10 else{return}
+        peerService=expected
         attempted[peripheral.identifier]=Date();peer=peripheral;peripheral.delegate=self;lastSeen=Date();central.stopScan()
         central.connect(peripheral);report("Connecting over Bluetooth…")
     }
-    func centralManager(_ central:CBCentralManager,didConnect peripheral:CBPeripheral){guard peer?.identifier==peripheral.identifier else{return};peripheral.discoverServices([CBUUID(string:BLEWire.reverseService)])}
+    func centralManager(_ central:CBCentralManager,didConnect peripheral:CBPeripheral){guard peer?.identifier==peripheral.identifier else{return};guard let peerService else{close("Bluetooth service unavailable");return};peripheral.discoverServices([peerService])}
     func centralManager(_ central:CBCentralManager,didFailToConnect peripheral:CBPeripheral,error:Error?){guard peer?.identifier==peripheral.identifier else{return};close("Bluetooth connection failed")}
     func centralManager(_ central:CBCentralManager,didDisconnectPeripheral peripheral:CBPeripheral,error:Error?){guard peer?.identifier==peripheral.identifier else{return};close("Waiting for iPhone")}
     func peripheral(_ peripheral:CBPeripheral,didDiscoverServices error:Error?){
         guard peer?.identifier==peripheral.identifier else{return}
-        guard error==nil,let service=peripheral.services?.first(where:{$0.uuid==CBUUID(string:BLEWire.reverseService)}) else{close("Bluetooth service unavailable");return}
+        guard error==nil,let service=peripheral.services?.first(where:{$0.uuid==peerService}) else{close("Bluetooth service unavailable");return}
         peripheral.discoverCharacteristics([CBUUID(string:BLEWire.input),CBUUID(string:BLEWire.reply),CBUUID(string:BLEWire.microphoneInput),CBUUID(string:BLEWire.microphoneReply)],for:service)
     }
     func peripheral(_ peripheral:CBPeripheral,didDiscoverCharacteristicsFor service:CBService,error:Error?){
@@ -112,14 +121,14 @@ final class BLEReverseHost:NSObject,CBCentralManagerDelegate,CBPeripheralDelegat
         while peer.canSendWriteWithoutResponse,let packet=microphoneWrites.next(maximum:size){peer.writeValue(packet,for:reply,type:.withoutResponse);microphoneWrites.sent(packet.count)}
     }
     func peripheral(_ peripheral:CBPeripheral,didModifyServices invalidatedServices:[CBService]){
-        guard peer?.identifier==peripheral.identifier,invalidatedServices.contains(where:{$0.uuid==CBUUID(string:BLEWire.reverseService)}) else{return}
+        guard peer?.identifier==peripheral.identifier,invalidatedServices.contains(where:{$0.uuid==peerService}) else{return}
         close("Waiting for iPhone")
     }
     private func close(_ text:String){
         if authenticated {_ = apply(["type":"up"])}
         if let peer{microphoneClose(peer.identifier)}
         microphoneInput=nil;microphoneReply=nil;microphoneCipher=nil;microphoneBuffer=PadFrameDecoder();microphoneWrites.reset()
-        let old=peer;peer=nil;input=nil;reply=nil;authenticated=false;challenge="";buffer.reset();writes=[]
+        let old=peer;peer=nil;peerService=nil;input=nil;reply=nil;authenticated=false;challenge="";buffer.reset();writes=[]
         if let old{central?.cancelPeripheralConnection(old)};report(text);scan()
     }
 }

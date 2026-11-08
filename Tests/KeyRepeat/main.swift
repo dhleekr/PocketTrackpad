@@ -1,5 +1,5 @@
 import Foundation
-for key in PadQuickKey.allCases {
+for key in PadQuickKey.allCases where key.keyCode != nil {
  var state=KeyRepeatState()
  assert(state.begin(key,at:0),"every quick key must accept a held press: \(key)")
  assert(state.tick(at:0.1)==nil,"short taps must remain single presses")

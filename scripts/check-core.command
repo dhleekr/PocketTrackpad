@@ -9,6 +9,8 @@ compile_run() {
   swiftc -module-cache-path "$TASK_CACHE" "$@" -o "$TASK_CHECK/$name"
   "$TASK_CHECK/$name"
 }
+python3 Tests/BLEDiscovery/check.py
+compile_run quick-actions shared/BLEWire.swift Tests/QuickActions/main.swift
 compile_run repeat shared/BLEWire.swift MacQuickKeys.swift KeyRepeat.swift Tests/KeyRepeat/main.swift
 compile_run discovery DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationDiscovery/main.swift
 compile_run dictation DictationShortcutDiscovery.swift DictationShortcutMonitor.swift MicrophoneInterfaces.swift MacVirtualMicrophone.swift GPTDictationShortcut.swift GPTMicrophoneControl.swift Tests/DictationShortcut/main.swift
