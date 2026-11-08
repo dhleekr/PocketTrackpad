@@ -270,6 +270,9 @@ private struct QuickKeySettings:View {
                     .disabled(client.ready && !client.supportsUnifiedKeyRepeat)
                 if client.ready && !client.supportsUnifiedKeyRepeat{Text(PTText("Update the Mac app to use these features.")).foregroundStyle(.secondary)}
             } footer:{Text(PTText("Applies to all keyboard keys that repeat while held."))}
+            Section {
+                SettingSlider(title:"Scroll key speed",valueText:PTFormat("%.2f×",client.scrollKeySpeed),value:$client.scrollKeySpeed,range:QuickKeyScrollState.speedRange,step:0.05)
+            } footer:{Text(PTText("Controls scrolling while holding Scroll up or Scroll down. Does not change two-finger scrolling."))}
             Section {Button(PTText("Restore default keys")){client.quickKeys=PadQuickKey.defaults}}
         }.navigationTitle(PTText("Quick keys"))
     }

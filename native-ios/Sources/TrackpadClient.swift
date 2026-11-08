@@ -49,6 +49,7 @@ import UIKit
     @Published var doubleTapInterval=0.5 {didSet{UserDefaults.standard.set(doubleTapInterval,forKey:"pad.doubleTapInterval")}}
     @Published var keyRepeatDelay=PadKeyRepeatTuning.defaultDelay {didSet{UserDefaults.standard.set(keyRepeatDelay,forKey:"pad.keyRepeatDelay")}}
     @Published var keyRepeatRate=PadKeyRepeatTuning.defaultRate {didSet{UserDefaults.standard.set(keyRepeatRate,forKey:PadKeyRepeatTuning.ratePreferenceKey)}}
+    @Published var scrollKeySpeed=PadTuning.saved(QuickKeyScrollState.speedPreferenceKey,default:1,range:QuickKeyScrollState.speedRange) {didSet{UserDefaults.standard.set(scrollKeySpeed,forKey:QuickKeyScrollState.speedPreferenceKey)}}
     @Published var pressDelay=0.16 {didSet{UserDefaults.standard.set(pressDelay,forKey:"pad.pressDelay")}}
     @Published var hapticTap=UserDefaults.standard.object(forKey:"pad.haptic.tap") as? Bool ?? true {didSet{UserDefaults.standard.set(hapticTap,forKey:"pad.haptic.tap")}}
     @Published var hapticPress=UserDefaults.standard.object(forKey:"pad.haptic.press") as? Bool ?? true {didSet{UserDefaults.standard.set(hapticPress,forKey:"pad.haptic.press")}}
@@ -92,11 +93,14 @@ import UIKit
         guard ready,key.repeatable else{return}
         guard transport == .wifi ? wifi.gestureOptions:reverse.gestureOptions else{message=PTText("Update the Mac app to use these features.");showConnection=true;return}
         endKey();heldKey=key
+        quickScroll.speedMultiplier=scrollKeySpeed
         if let delta=quickScroll.begin(key,at:ProcessInfo.processInfo.systemUptime) {
             send([PadEvent(type:"up"),PadEvent(type:"scroll",x:0,y:delta,phase:"began",name:"contentOnly")])
             let timer=Timer(timeInterval:1.0/60,repeats:true){[weak self] _ in
                 MainActor.assumeIsolated {
-                    guard let self,self.ready,let delta=self.quickScroll.tick(at:ProcessInfo.processInfo.systemUptime) else{return}
+                    guard let self,self.ready else{return}
+                    self.quickScroll.speedMultiplier=self.scrollKeySpeed
+                    guard let delta=self.quickScroll.tick(at:ProcessInfo.processInfo.systemUptime) else{return}
                     self.send([PadEvent(type:"scroll",x:0,y:delta,phase:"changed",name:"contentOnly")])
                 }
             }

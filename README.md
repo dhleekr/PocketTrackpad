@@ -14,7 +14,7 @@ An iPhone controller and a native Mac receiver. Move, click, scroll, zoom, and s
 
 ## Get started
 
-1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.26 (69).
+1. Install the iPhone controller and the separate Mac receiver. Use the existing [iPhone App Store listing](https://apps.apple.com/app/id6829109280); the latest uploaded iPhone build is 1.4.27 (70); the current Mac receiver is 1.4.26.
 2. Open the Mac receiver. Allow it in **System Settings → Privacy & Security → Accessibility**.
 3. Scan the Mac QR code from the iPhone app. Choose **Wi-Fi** on the same local network, or **Bluetooth** nearby.
 4. Keep the iPhone app open and start moving. Open the Mac DMG and drag PocketTrackpad to Applications. The Mac window stays open after connection. Close the window to keep the receiver running in the background, or use Quit / Command-Q to disconnect and fully exit. Reopening the app shows its connection status and QR again. The iPhone Settings sheet stays open until you dismiss it.
@@ -199,6 +199,12 @@ The release was checked with the focused repeat/wire tests and full core checks.
 - A dedicated native action list groups Mac actions, keyboard keys, and editing commands. Live connection updates do not rebuild the scrolling table.
 - Includes QR-scoped Bluetooth discovery from 1.4.24.
 
-## Current release: 1.4.26
+## Previous release: 1.4.26
 
 Quick keys now share one **Key repeat speed** setting (5–60 repetitions per second). It applies to held keyboard actions including Backspace, Enter, Tab, arrow keys, and editing shortcuts. The initial press remains immediate, and the repeat delay still controls when repetition starts. Existing Backspace speed preferences migrate to the new shared setting without changing the saved value. Mission Control remains a single-tap action; scroll buttons retain continuous scrolling. Update both apps to use the shared speed. Older receivers advertise no support, so the iPhone disables the shared speed control and displays update guidance.
+
+## Current iPhone release: 1.4.27 (70)
+
+Settings → Quick keys now includes **Scroll key speed**, from 0.25× to 4× (default 1×). It adjusts continuous scrolling while holding Scroll up or Scroll down, independently of keyboard repeat speed. Two-finger trackpad scrolling and the initial scroll tap are unchanged. The setting is saved on the iPhone and works over Wi-Fi and Bluetooth with the existing Mac 1.4.26 receiver; no Mac update is required.
+
+Validation: rate and cadence regression tests, release-on-lift checks, iOS build, and simulator layout checks passed. The user verified the TestFlight build before App Store submission.

@@ -353,3 +353,7 @@
 "Key repeat speed" = "키 반복 속도";
 
 "Applies to all keyboard keys that repeat while held." = "길게 누르면 반복되는 모든 키보드 키에 적용됩니다.";
+
+"Scroll key speed" = "스크롤 키 속도";
+"Controls scrolling while holding Scroll up or Scroll down. Does not change two-finger scrolling." = "위로·아래로 스크롤 키를 길게 누를 때 적용됩니다. 두 손가락 스크롤에는 영향을 주지 않습니다.";
+"%.2f×" = "%.2f×";

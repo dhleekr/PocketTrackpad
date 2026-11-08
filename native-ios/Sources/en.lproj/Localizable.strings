@@ -353,3 +353,7 @@
 "Key repeat speed" = "Key repeat speed";
 
 "Applies to all keyboard keys that repeat while held." = "Applies to all keyboard keys that repeat while held.";
+
+"Scroll key speed" = "Scroll key speed";
+"Controls scrolling while holding Scroll up or Scroll down. Does not change two-finger scrolling." = "Controls scrolling while holding Scroll up or Scroll down. Does not change two-finger scrolling.";
+"%.2f×" = "%.2f×";

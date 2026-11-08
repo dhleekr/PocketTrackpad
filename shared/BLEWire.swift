@@ -256,13 +256,17 @@ enum PadQuickKey:String,CaseIterable {
 struct QuickKeyScrollState {
     private(set) var key:PadQuickKey?
     private var previous=0.0
+    var speedMultiplier=1.0
+    static let speedRange=0.25...4.0
+    static let speedPreferenceKey="pad.scrollKeySpeed"
+    static func speed(_ value:Double)->Double {value.isFinite ? min(speedRange.upperBound,max(speedRange.lowerBound,value)):1}
     mutating func begin(_ key:PadQuickKey,at now:Double)->Double? {
         guard let direction=key.scrollDirection,now.isFinite else{return nil}
         self.key=key;previous=now;return direction*32
     }
     mutating func tick(at now:Double)->Double? {
         guard let direction=key?.scrollDirection,now.isFinite,now>previous else{return nil}
-        let elapsed=min(now-previous,1.0/30);previous=now;return direction*480*elapsed
+        let elapsed=min(now-previous,1.0/30);previous=now;return direction*480*Self.speed(speedMultiplier)*elapsed
     }
     mutating func end(){key=nil}
 }
